@@ -1,0 +1,32 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "build": "tsup",
+    "watch": "tsup --watch",
+    "prestart": "npm run build",
+    "test": "node --import tsx --test $(find . -name '*.test.ts')",
+    "test:coverage": "node --import tsx --experimental-test-coverage --test  $(find . -name '*.test.ts')",
+    "test:watch": "node --import tsx --test --watch  $(find . -name '*.test.ts')",
+    "start": "npm run prestart && func start"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.2.0",
+    "@azure/functions": "^4.7.0",
+    "@azure/identity": "^4.8.0",
+    "@azure/msal-node": "^3.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.24",
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  },
+  "main": "dist/src/{index.js,functions/**/*.mjs}",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
