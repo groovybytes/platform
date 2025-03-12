@@ -31,24 +31,18 @@ jobs:
           submodules: true
           lfs: false
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10'
-
       - name: Setup Node ${{ env.NODE_VERSION }} Environment
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm' # optional
 
-      - name: 'Resolve Project Dependencies Using Pnpm'
+      - name: 'Resolve Project Dependencies Using Npm'
         shell: bash
         run: |
           pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
-          pnpm install -r --frozen-lockfile
-          pnpm run --if-present build
-          pnpm run --if-present test
+          npm install
+          npm run --if-present build
+          npm run --if-present test
           popd
 
       - name: Zip artifact for deployment
