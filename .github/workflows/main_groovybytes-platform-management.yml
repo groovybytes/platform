@@ -7,6 +7,11 @@ on:
   push:
     branches:
       - main
+      - "**"  # Deploy previews for all branches
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
   workflow_dispatch:
 
 env:
@@ -22,19 +27,28 @@ jobs:
     steps:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10'
 
       - name: Setup Node ${{ env.NODE_VERSION }} Environment
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm' # optional
 
-      - name: 'Resolve Project Dependencies Using Npm'
+      - name: 'Resolve Project Dependencies Using Pnpm'
         shell: bash
         run: |
           pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
-          npm install
-          npm run build --if-present
-          npm run test --if-present
+          pnpm install -r --frozen-lockfile
+          pnpm run --if-present build
+          pnpm run --if-present test
           popd
 
       - name: Zip artifact for deployment
@@ -61,7 +75,7 @@ jobs:
       
       - name: 'Run Azure Functions Action'
         uses: Azure/functions-action@v1
-        id: fa
+        id: function-app
         with:
           app-name: 'groovybytes-platform-management'
           slot-name: 'Production'
