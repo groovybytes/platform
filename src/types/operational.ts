@@ -49,7 +49,7 @@ export interface Workspace {
   type: "standard" | "agency";  // Agency is a workspace type
   status: "active" | "inactive";
   settings: WorkspaceSettings;
-  subscriptionId: string;  // Reference to billing subscription
+  subscriptionId: string | null;  // Reference to billing subscription
 
   // Agency-specific fields
   agency?: {

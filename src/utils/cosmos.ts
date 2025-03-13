@@ -28,27 +28,29 @@ export function getDatabase(): Database {
 
 /**
  * Get a container instance with caching
- * @param containerName Name of the container
+ * @param _container Name of the container or Container instance
  */
-export function getContainer(containerName: string): Container {
-  if (!containers[containerName]) {
-    containers[containerName] = getDatabase().container(containerName);
+export function getContainer(_container: string | Container): Container {
+  if (typeof _container !== "string") return _container;
+
+  if (!containers[_container]) {
+    containers[_container] = getDatabase().container(_container);
   }
-  return containers[containerName];
+  return containers[_container];
 }
 
 /**
  * Execute a query against a container
- * @param containerName Name of the container
+ * @param container Name of the container or Container instance
  * @param query SQL query string
  * @param parameters Query parameters
  */
 export async function queryItems<T>(
-  containerName: string,
+  _container: string | Container,
   query: string,
   parameters: { name: string, value: any }[] = []
 ): Promise<T[]> {
-  const container = getContainer(containerName);
+  const container = getContainer(_container);
   const querySpec = {
     query,
     parameters
@@ -60,66 +62,66 @@ export async function queryItems<T>(
 
 /**
  * Read an item from a container
- * @param containerName Name of the container
+ * @param _container Name of the container or Container instance
  * @param id Item ID
  * @param partitionKey Partition key value (defaults to ID)
  */
 export async function readItem<T extends ItemDefinition>(
-  containerName: string,
+  _container: string | Container,
   id: string,
   partitionKey: string = id
 ): Promise<T> {
-  const container = getContainer(containerName);
+  const container = getContainer(_container);
   const { resource } = await container.item(id, partitionKey).read<T>();
   return resource as T;
 }
 
 /**
  * Create an item in a container
- * @param containerName Name of the container
+ * @param _container Name of the container or Container instance
  * @param item Item to create
  */
 export async function createItem<T extends ItemDefinition>(
-  containerName: string,
+  _container: string | Container,
   item: T
 ): Promise<T> {
-  const container = getContainer(containerName);
+  const container = getContainer(_container);
   const { resource } = await container.items.create<T>(item);
   return resource as T;
 }
 
 /**
  * Replace an item in a container
- * @param containerName Name of the container
+ * @param _container Name of the container or Container instance
  * @param id Item ID
  * @param item New item data
  * @param partitionKey Partition key value (defaults to ID)
  */
 export async function replaceItem<T extends ItemDefinition>(
-  containerName: string,
+  _container: string | Container,
   id: string,
   item: T,
   partitionKey: string = id
 ): Promise<T> {
-  const container = getContainer(containerName);
+  const container = getContainer(_container);
   const { resource } = await container.item(id, partitionKey).replace<T>(item);
   return resource as T;
 }
 
 /**
  * Patch an item in a container
- * @param containerName Name of the container
+ * @param _container Name of the container or Container instance
  * @param id Item ID
  * @param operations Patch operations
  * @param partitionKey Partition key value (defaults to ID)
  */
 export async function patchItem<T extends ItemDefinition>(
-  containerName: string,
+  _container: string | Container,
   id: string,
   operations:  PatchOperation[],
   partitionKey: string = id
 ): Promise<T> {
-  const container = getContainer(containerName);
+  const container = getContainer(_container);
   const { resource } = await container.item(id, partitionKey).patch({
     operations
   });
@@ -128,15 +130,15 @@ export async function patchItem<T extends ItemDefinition>(
 
 /**
  * Delete an item from a container
- * @param containerName Name of the container
+ * @param _container Name of the container or Container instance
  * @param id Item ID
  * @param partitionKey Partition key value (defaults to ID)
  */
 export async function deleteItem(
-  containerName: string,
+  _container: string | Container,
   id: string,
   partitionKey: string = id
 ): Promise<void> {
-  const container = getContainer(containerName);
+  const container = getContainer(_container);
   await container.item(id, partitionKey).delete();
 }
