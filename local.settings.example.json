@@ -1,11 +1,19 @@
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "API_BASE_URL": "http://localhost:7071/api",
-    "AZURE_STORAGE_ACCOUNT_NAME": "groovybytesassetsstorage",
-    "AZURE_STORAGE_ACCOUNT_KEY": "FrNFiHf0Y8Y3y6Jj4Gcq9CED/FvVbaFoHxQdbpBbGHBEPD+2nOEzirCMVfcAy6GTdSoyNH4k/Jvw+AStdTgNuQ==",
-    "AZURE_STORAGE_CONTAINER": "workspace"
+    "AZURE_STORAGE_ACCOUNT_NAME": "assetsstorage",
+    "AZURE_STORAGE_ACCOUNT_KEY": "[storage-account-key]",
+    "AZURE_STORAGE_SAS_CONNECTION_STRING": "BlobEndpoint=https://assetsstorage.blob.core.windows.net/;QueueEndpoint=https://assetsstorage.queue.core.windows.net/;FileEndpoint=https://assetsstorage.file.core.windows.net/;TableEndpoint=https://assetsstorage.table.core.windows.net/;SharedAccessSignature=...",
+    "AZURE_STORAGE_CONTAINER": "workspace",
+    "IOT_HUB_CONNECTION_STRING": "HostName=iot-hub.azure-devices.net;SharedAccessKeyName=registryReadWrite;SharedAccessKey=...",
+    "IOT_HUB_HOSTNAME": "iot-hub.azure-devices.net",
+    "COSMOS_CONNECTION_STRING": "AccountEndpoint=https://operational-db.documents.azure.com:443/;AccountKey=...;",
+    "COSMOS_DATABASE_NAME": "operational"
+  },
+  "Host": {
+    "CORS": "*"
   }
 }
