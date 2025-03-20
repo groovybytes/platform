@@ -7,7 +7,7 @@ import { notFound, handleApiError } from '~/utils/error';
 
 /**
  * HTTP Trigger to update a device's details
- * PUT /api/devices/{id}
+ * PUT /api/devices/update/{id}
  */
 const UpdateDeviceHandler = async (
   request: HttpRequest,
@@ -72,7 +72,7 @@ const UpdateDeviceHandler = async (
 
 // Register the HTTP trigger
 const _FunctionName = 'UpdateDevice';
-const _FunctionRoute = 'devices/{id}';
+const _FunctionRoute = 'devices/update/{id}';
 const _FunctionHandler = UpdateDeviceHandler;
 
 app.http(_FunctionName, {

@@ -12,7 +12,7 @@ let defaultDeviceCounter = 1;
 
 /**
  * HTTP Trigger to register a new IoT device
- * POST /api/device/register
+ * POST /api/devices/register
  */
 const RegisterDeviceHandler = async (
   request: HttpRequest,
@@ -83,7 +83,7 @@ const RegisterDeviceHandler = async (
 
 // Register the HTTP trigger
 const _FunctionName = 'RegisterDevice';
-const _FunctionRoute = 'device/register';
+const _FunctionRoute = 'devices/register';
 const _FunctionHandler = RegisterDeviceHandler;
 
 app.http(_FunctionName, {

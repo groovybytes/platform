@@ -7,7 +7,7 @@ import { handleApiError } from '~/utils/error';
 
 /**
  * HTTP Trigger to get all registered devices
- * GET /api/devices
+ * GET /api/devices/fetch
  */
 const GetDevicesHandler = async (
   request: HttpRequest,
@@ -32,7 +32,7 @@ const GetDevicesHandler = async (
 
 // Register the HTTP trigger
 const _FunctionName = 'GetDevices';
-const _FunctionRoute = 'devices';
+const _FunctionRoute = 'devices/fetch';
 const _FunctionHandler = GetDevicesHandler;
 
 app.http(_FunctionName, {

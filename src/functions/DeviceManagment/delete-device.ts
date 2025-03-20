@@ -8,7 +8,7 @@ import { deleteIoTHubDevice } from '~/utils/iothub';
 
 /**
  * HTTP Trigger to delete a device
- * DELETE /api/devices/{id}
+ * DELETE /api/devices/delete/{id}
  */
 const DeleteDeviceHandler = async (
   request: HttpRequest,
@@ -65,7 +65,7 @@ const DeleteDeviceHandler = async (
 
 // Register the HTTP trigger
 const _FunctionName = 'DeleteDevice';
-const _FunctionRoute = 'devices/{id}';
+const _FunctionRoute = 'devices/delete/{id}';
 const _FunctionHandler = DeleteDeviceHandler;
 
 app.http(_FunctionName, {
