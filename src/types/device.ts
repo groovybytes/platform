@@ -9,6 +9,8 @@ export interface Device {
   location: string;
   purpose: string;
   connectionString: string;
+  workspaceId: string;
+  projectId?: string;
   createdAt: string;
   createdBy?: string;
   modifiedAt: string;
