@@ -256,10 +256,7 @@ export function protectEndpoint<T>(
         requestMethod: req.method || 'unknown'
       };
 
-      try {
-        // PERMISSION CHECKING PHASE
-        let isCheckingPermissions = true;
-        
+      try {        
         try {
           // Log permission check attempt (debug level)
           logger?.debug?.(
@@ -330,18 +327,15 @@ export function protectEndpoint<T>(
             resourceName,
             'Permission check failed due to an error'
           );
-        }
-        
-        // HANDLER EXECUTION PHASE
-        // Switch execution phase flag
-        isCheckingPermissions = false;
-        
+        }  
+
         // Log successful permission check (debug level)
         logger?.debug?.(
           `Permission check passed for ${functionName}`,
           enhancedLogContext
         );
         
+        // HANDLER EXECUTION PHASE      
         // Execute the handler with full error protection
         try {
           return await handler(req, context);
