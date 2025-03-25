@@ -1,3 +1,5 @@
+import { permissionDenied, PermissionDeniedError } from "./error";
+
 /**
  * A token representation of a permission.
  */
@@ -37,28 +39,6 @@ export interface PermissionOptions {
    * - false: Use only the explicitly granted permissions
    */
   expandHierarchy?: boolean;
-}
-
-/**
- * Custom error class for permission denied scenarios
- */
-export class PermissionDeniedError extends Error {
-  public readonly scope?: string;
-  public readonly action?: string;
-  public readonly requestedPermission?: string;
-
-  constructor(message: string, requestedPermission?: string) {
-    super(message);
-    this.name = 'PermissionDeniedError';
-    this.requestedPermission = requestedPermission;
-
-    // Extract scope and action if permission string is provided
-    if (requestedPermission && requestedPermission.includes(':')) {
-      const [scope, action] = requestedPermission.split(':');
-      this.scope = scope;
-      this.action = action;
-    }
-  }
 }
 
 /**
@@ -472,6 +452,29 @@ export function createPermissionChecker(permissionList: string[]) {
 
     canAdmin: (options: PermissionOptions = {}): boolean => {
       return canAdmin(permissionList, options);
+    }
+  };
+}
+
+/**
+ * Handle permission errors in function handlers
+ * @param fn The function handler to wrap with permission checking
+ */
+export function withPermissionCheck<T, U>(
+  fn: (context: T) => Promise<U>
+): (context: T) => Promise<U> {
+  return async (context: T) => {
+    try {
+      return await fn(context);
+    } catch (error) {
+      if (error instanceof PermissionDeniedError) {
+        throw permissionDenied(
+          error.requestedPermission || 'unknown',
+          undefined,
+          error.message
+        );
+      }
+      throw error;
     }
   };
 }

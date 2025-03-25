@@ -1,16 +1,7 @@
-import type { ActivityHandler, OrchestrationContext, OrchestrationHandler } from 'durable-functions';
-import type { HttpHandler, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import type { User } from '~/types/operational.ts';
-import type { ErrorResponse } from "@azure/cosmos";
+import type { OrchestrationContext, OrchestrationHandler } from 'durable-functions';
 
 import * as df from 'durable-functions';
-import { app } from '@azure/functions';
-import { CosmosClient } from "@azure/cosmos";
-
-import { EmailClient } from '@azure/communication-email';
 import { waitForEventWithRetries } from '~/utils/durable.ts';
-
-import process from "node:process";
 
 // Define the input and event types for strong typing
 export interface OnboardingInput {
