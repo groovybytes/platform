@@ -120,9 +120,9 @@ export interface AssignedRole {
 /**
  * Permission exceptions
  */
-export interface Exception {
+export interface RoleException {
   id: string;
-  type: "exceptions",
+  type: "role-exceptions",
   userId: string;
   permissions: string[]; // "[resource_type]:[resource_id]:[scope]:[action]:[effect]"
   reason: string; // Documentation for audit purposes
