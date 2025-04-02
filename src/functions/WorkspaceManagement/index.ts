@@ -1,54 +1,20 @@
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import type { EndpointDefinition } from '~/types/endpoint';
 import type { User, Workspace } from '~/types/operational';
 
 // Import necessary functions - these would be implemented in your membership module
 import { createMembership, getUserMemberships, assignRolesToUser } from '~/utils/membership';
 
-import { queryItems, createItem, readItem, patchItem, deleteItem } from '~/utils/cosmos';
+import { queryItems, readItem, patchItem, deleteItem } from '~/utils/cosmos';
 import { badRequest, conflict, notFound, handleApiError } from '~/utils/error';
 import { secureEndpoint } from '~/utils/protect';
 
 import { app } from '@azure/functions';
-import { nanoid } from 'nanoid';
 
 import CreateWorkspace from './create';
-import type { EndpointDefinition } from '~/types/endpoint';
+import GetWorkspace from './get';
 
 
-/**
- * HTTP Trigger to get a workspace by ID
- * GET /api/v1/workspaces/{id}
- */
-const GetWorkspaceHandler: HttpHandler = secureEndpoint(
-  {
-    permissions: "workspace:*:*:read:allow",
-    requireResource: "workspace"
-  },
-  async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-    try {
-      const workspaceId = request.params.id;
-      
-      if (!workspaceId) {
-        return badRequest('Workspace ID is required');
-      }
-
-      // Get workspace from Cosmos DB
-      const workspace = await readItem<Workspace>('workspaces', workspaceId);
-      
-      if (!workspace) {
-        return notFound('Workspace', workspaceId);
-      }
-
-      return {
-        status: 200,
-        jsonBody: workspace
-      };
-    } catch (error) {
-      context.error('Error getting workspace:', error);
-      return handleApiError(error);
-    }
-  }
-);
 
 /**
  * HTTP Trigger to list all workspaces for the current user
@@ -250,10 +216,10 @@ export const Endpoints: Record<string, EndpointDefinition> = {
     handler: CreateWorkspace.Handler
   },
   GetWorkspace: {
-    name: "GetWorkspace",
-    route: "v1/workspaces/{id}",
-    methods: ["GET"],
-    handler: GetWorkspaceHandler
+    name: GetWorkspace.Name,
+    route: GetWorkspace.Route,
+    methods: GetWorkspace.Methods,
+    handler: GetWorkspace.Handler
   },
   ListWorkspaces: {
     name: "ListWorkspaces",
@@ -289,8 +255,8 @@ Object.values(Endpoints).forEach(endpoint => {
 export type CreateWorkspaceInput = typeof CreateWorkspace.Input;
 export type CreateWorkspaceOutput = typeof CreateWorkspace.Output;
 
-export type GetWorkspaceInput = { id: string };
-export type GetWorkspaceOutput = Workspace;
+export type GetWorkspaceInput = typeof GetWorkspace.Input;
+export type GetWorkspaceOutput = typeof GetWorkspace.Output;
 
 export type ListWorkspacesInput = void;
 export type ListWorkspacesOutput = Workspace[];

@@ -1,13 +1,19 @@
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import type { EnhacedLogContext } from '~/utils/protect';
 import type { Workspace } from '~/types/operational';
+
 import { queryItems, createItem, patchItem } from '~/utils/cosmos';
 import { badRequest, conflict, handleApiError } from '~/utils/error';
 
-import { secureEndpoint, type EnhacedLogContext } from '~/utils/protect';
+import { assignRolesToUser, createMembership } from '~/utils/membership';
+import { getRequestContext } from '~/utils/context';
+
+import { getDefaultWorkspaceSettings } from './_utils';
+import { BASE_URL } from '~/utils/config';
+
+import { secureEndpoint } from '~/utils/protect';
 import { sluggify } from '~/utils/utils';
 import { nanoid } from 'nanoid';
-import { getRequestContext } from '~/utils/context';
-import { assignRolesToUser, createMembership } from '~/utils/membership';
 
 /**
  * HTTP Trigger to create a new workspace
@@ -15,7 +21,7 @@ import { assignRolesToUser, createMembership } from '~/utils/membership';
  */
 const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
   "system:*:workspaces:create:allow",
-  async (request: HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
+  async (request: Request | HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
     try {
       // Get user ID from request context
       const { request: { userId } } = context?.requestContext ?? await getRequestContext(request);
@@ -84,10 +90,11 @@ const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
       );
 
       // If this is part of onboarding, trigger the workspace created event
-      const instanceId = request.query.get('onboardingInstance');
+      const url = new URL(request.url);
+      const instanceId = url.searchParams.get('onboardingInstance');
       if (instanceId) {
         // Call the workflow endpoint to signal workspace creation
-        const eventRequest = await fetch(`${process.env.APP_BASE_URL}/api/onboarding/workspace-created`, {
+        const eventRequest = await fetch(`${BASE_URL}/api/onboarding/workspace-created`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
