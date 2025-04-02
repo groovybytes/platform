@@ -1,4 +1,3 @@
-
 /**
  * Core user representation in the operational database
  */
@@ -15,29 +14,10 @@ export interface User {
     primary: string;
     all: string[];
   };
-  // All user role assignments
-  roles: {
-    workspaces: Record<string, WorkspaceRole[]>;        // Workspace ID -> workspace roles
-    projects: Record<string, ProjectRole[]>;            // Project ID -> project roles (in addition to team roles)
-  };
+  // No longer tracking guest status at user level
   createdAt: string;
   modifiedAt: string;
 }
-
-/**
- * Workspace-level roles (focused on operational aspects)
- */
-export type WorkspaceRole = "owner" | "admin" | "billing" | "member" | "guest";
-
-/**
- * Project-level roles (focused on content/feature access)
- */
-export type ProjectRole =
-  | "admin"     // Full project access
-  | "developer"         // Access to component registry/code
-  | "designer"          // Access to visual tools
-  | "analyst"          // Access to analytics/experiments
-  | "viewer";          // Read-only access
 
 /**
  * Represents a workspace - the top-level organizational unit
@@ -58,28 +38,111 @@ export interface Workspace {
       addedAt: string;
       status: "active" | "suspended";
     }>;
-    defaultRoles?: ProjectRole[];  // Default roles for agency team members
   };
 
-  rootDomain?: string;       // Primary root domain for this workspace
-
-  // Workspace-level permissions (billing, admin, etc)
-  roles: Record<WorkspaceRole, RoleDefinition>;
-  permissions: Record<string, Permission>;
-
-  // Teams and their project access
-  teams: Record<string, {
-    name: string;
-    description?: string;
-    members: string[];  // User IDs
-    projectAccess: Record<string, ProjectRole[]>; // Project ID -> roles for this team
-  }>;
-
+  // Workspace permissions are now handled via the roles and permissions containers
+  // Teams are now managed separately
   projects: string[]; // List of project IDs
   createdAt: string;
   createdBy: string;
   modifiedAt: string;
   modifiedBy: string;
+}
+
+/**
+ * Represents a team
+ */
+export interface Team {
+  id: string;
+  workspaceId: string; // For partitioning and efficient retrieval
+  name: string;
+  description?: string;
+  members: string[];  // User IDs
+  createdAt: string;
+  createdBy: string;
+  modifiedAt: string;
+  modifiedBy: string;
+}
+
+/**
+ * Workspace settings, including content types, security, and features.
+ */
+export interface WorkspaceSettings {
+  contentTypes: string[];
+  defaultLocale: string;
+  supportedLocales: string[];
+  security: {
+    mfa: boolean;
+    ssoEnabled: boolean;
+    ipAllowlist: string[];
+  };
+  features: {
+    experimentationEnabled: boolean;
+    advancedAnalytics: boolean;
+    aiAssistant: boolean;
+  };
+}
+
+/**
+ * Workspace-level roles
+ */
+export interface RoleDefinition {
+  id: string;
+  type: "role",
+  name: string;
+  description: string;
+  permissions: string[]; // "[resource_type]:[resource_id]:[scope]:[action]:[effect]"
+  resourceType: "workspace" | "project" | "system";
+  resourceId: string; // ID of specific resource or "*" for template roles
+  is_system_role: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * User-Role assignments with additional context for guest access
+ */
+export interface UserRole {
+  id: string;
+  type: "user-role",
+  userId: string;
+  roles: string[]; // List of role IDs
+  resourceId: string; // The specific resource this role applies to
+  resourceType: "workspace" | "project"; // The type of resource
+  is_guest: boolean; // Whether this role assignment is a guest relationship
+  guest_sponsor_id?: string; // ID of the user who sponsored this guest access
+  assigned_by: string;
+  assigned_at: string;
+  expires_at?: string; // Guest access often has an expiration
+}
+
+/**
+ * Permission exceptions
+ */
+export interface Exception {
+  id: string;
+  userId: string;
+  permissions: string[]; // "[resource_type]:[resource_id]:[scope]:[action]:[effect]"
+  reason: string; // Documentation for audit purposes
+  created_by: string;
+  created_at: string;
+  expires_at?: string;
+}
+
+/**
+ * Permission audit logs
+ */
+export interface PermissionLog {
+  id: string;
+  userId: string;
+  action: "check" | "grant" | "revoke" | "emergency_access";
+  permission: string;
+  resource_type: string;
+  resource_id: string;
+  result: "allowed" | "denied";
+  timestamp: string;
+  details?: Record<string, unknown>; // Additional context
 }
 
 /**
@@ -105,8 +168,7 @@ export interface ApiKey {
 
   /**
    * List of permissions granted to this API key.
-   * Permissions follow the format: "<resource>:<action>"
-   * Example: ["content:read", "content:preview"]
+   * Permissions follow the format: "[resource_type]:[resource_id]:[scope]:[action]:[effect]"
    */
   permissions: string[];
 
@@ -144,38 +206,38 @@ export interface ApiKey {
   modifiedBy: string;
 }
 
+
 /**
- * Workspace settings, including content types, security, and features.
+ * Represents a project within a workspace
  */
-export interface WorkspaceSettings {
-  contentTypes: string[];
+export interface Project {
+  id: string;
+  workspaceId: string; // For partitioning and efficient retrieval
+  name: string;
+  slug: string;
+  description?: string;
+  status: "active" | "archived" | "draft";
+  settings: ProjectSettings;
+  // Project permissions are now handled via the roles and permissions containers
+  createdAt: string;
+  createdBy: string;
+  modifiedAt: string;
+  modifiedBy: string;
+}
+
+/**
+ * Project settings
+ */
+export interface ProjectSettings {
   defaultLocale: string;
   supportedLocales: string[];
   security: {
-    mfa: boolean;
-    ssoEnabled: boolean;
     ipAllowlist: string[];
+    allowedOrigins: string[];
   };
   features: {
     experimentationEnabled: boolean;
     advancedAnalytics: boolean;
     aiAssistant: boolean;
   };
-}
-
-/**
- * Represents a permission in the system.
- */
-export interface Permission {
-  description: string;
-  category: "data" | "analytics" | "api" | "billing";
-}
-
-/**
- * Represents a role in the workspace.
- */
-export interface RoleDefinition {
-  name: string;
-  description: string;
-  permissions: string[]; // e.g. ["data:read", "billing:read"]
 }

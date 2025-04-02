@@ -1,11 +1,14 @@
-import type { HttpResponseInit, InvocationContext } from "@azure/functions";
+import type { HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
+import type { PermissionOptions } from "./permissions";
+
+import { checkPermission } from "./permissions";
 import {
   forbidden,
   handleApiError,
   permissionDenied,
   PermissionDeniedError,
 } from "./error";
-import { checkPermission, type PermissionOptions } from "./permissions";
+import { extractUserFromRequest } from "./auth";
 
 /**
  * Configuration options for the protected endpoint
@@ -206,7 +209,7 @@ export interface AccessControl {
  *    - MITIGATION: Implement appropriate timeouts and consider using durable functions for long operations
  */
 export function protectEndpoint<T>(
-  checkFn: (permission: string | string[], req: any, context: T, options?: any) => boolean,
+  checkFn: (permission: string | string[], req: any, context: T, options?: any) => Promise<boolean>,
   access: string | string[] | AccessControl,
   handler: (req: any, context: T) => Promise<HttpResponseInit>,
   options: ProtectEndpointOptions = {}
@@ -265,7 +268,7 @@ export function protectEndpoint<T>(
           );
           
           // Permission check with boolean mode for consistency
-          const allowed = checkFn(permissions, req, logger as T, { 
+          const allowed = await checkFn(permissions, req, logger as T, { 
             mode: 'boolean',
             match,
             errorMessage
@@ -421,55 +424,6 @@ export function combinePermissionChecks<T>(
   };
 }
 
-
-/**
- * Extracts user information from a request
- * 
- * @remarks
- * This function centralizes user extraction logic to ensure consistent 
- * user identification across the application. It should be adapted to
- * match your specific authentication implementation.
- * 
- * @param req - The HTTP request object
- * @returns User object with id and permissions
- */
-export function extractUserFromRequest(req: any): { id: string; permissions: string[] } {
-  // IMPORTANT: Replace this implementation with your actual auth extraction logic
-  // This could involve JWT token validation, session lookup, etc.
-  
-  // Example implementation:
-  // - Check authorization header for Bearer token
-  // - Verify and decode JWT
-  // - Extract user ID and permissions from JWT claims
-
-  const authHeader = req.headers?.authorization;
-  
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      // This is a simplified example - real implementation would validate the token
-      const token = authHeader.substring(7);
-      
-      // Parse JWT payload (simplified example - use a proper JWT library in production)
-      const payload = JSON.parse(
-        Buffer.from(token.split('.')[1], 'base64').toString()
-      );
-      
-      return {
-        id: payload.sub || 'unknown',
-        permissions: Array.isArray(payload.permissions) ? payload.permissions : []
-      };
-    } catch (error) {
-      console.error('Error extracting user from token:', error);
-    }
-  }
-  
-  // Default for unauthenticated requests
-  return {
-    id: 'anonymous',
-    permissions: []
-  };
-}
-
 /**
  * Creates a permission checking function bound to the current request
  * 
@@ -481,9 +435,9 @@ export function extractUserFromRequest(req: any): { id: string; permissions: str
  * @param req - The HTTP request object
  * @returns A function that checks permissions for the current user
  */
-export function createRequestPermissionChecker(req: any) {
+export async function createRequestPermissionChecker(req: Request | HttpRequest) {
   // Extract user permissions once
-  const user = extractUserFromRequest(req);
+  const user = await extractUserFromRequest(req);
   
   /**
    * Check if the current user has the specified permission(s)
@@ -517,8 +471,8 @@ export function secureEndpoint<T>(
 ) {
   return protectEndpoint(
     // Built-in permission checker that extracts user from request
-    (permission, req, _, options) => {
-      const user = extractUserFromRequest(req);
+    async (permission, req, _, options) => {
+      const user = await extractUserFromRequest(req);
       return checkPermission(user.permissions, permission, options);
     },
     access,
@@ -532,7 +486,7 @@ export function secureEndpoint<T>(
  * @param req - The HTTP request containing user information
  * @returns A function that can check permissions and return HTTP errors or null
  */
-export function createPermissionMiddleware(req: any) {
+export function createPermissionMiddleware(req: Request | HttpRequest) {
   const user = extractUserFromRequest(req);
   
   /**
@@ -542,12 +496,12 @@ export function createPermissionMiddleware(req: any) {
    * @param resourceName - Optional resource name for error messages
    * @returns HttpResponseInit if denied, null if allowed
    */
-  return function checkResourcePermission(
+  return async function checkResourcePermission(
     permission: string | string[],
     resourceName?: string
-  ): HttpResponseInit | null {
+  ): Promise<HttpResponseInit | null> {
     try {
-      const allowed = checkPermission(user.permissions, permission, {
+      const allowed = checkPermission((await user).permissions, permission, {
         mode: 'throw',
         errorMessage: resourceName 
           ? `You don't have permission to access ${resourceName}` 
