@@ -103,9 +103,9 @@ export interface RoleDefinition {
 /**
  * User-Role assignments with additional context for guest access
  */
-export interface UserRole {
+export interface AssignedRole {
   id: string;
-  type: "user-role",
+  type: "assigned-roles",
   userId: string;
   roles: string[]; // List of role IDs
   resourceId: string; // The specific resource this role applies to
@@ -122,6 +122,7 @@ export interface UserRole {
  */
 export interface Exception {
   id: string;
+  type: "exceptions",
   userId: string;
   permissions: string[]; // "[resource_type]:[resource_id]:[scope]:[action]:[effect]"
   reason: string; // Documentation for audit purposes
