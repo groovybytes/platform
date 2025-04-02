@@ -1,3 +1,4 @@
+// @filename: error.ts
 import type { HttpResponseInit } from '@azure/functions';
 import type { ErrorResponse } from "@azure/cosmos";
 

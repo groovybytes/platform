@@ -1,15 +1,16 @@
 // @filename: protect.ts
 import type { HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import type { PermissionOptions } from "./permissions";
+import type { RequestContext } from "./context";
 
 import { checkPermission, isPermissionAllowed } from "./permissions";
+import { getRequestContext } from "./context";
 import {
   forbidden,
   handleApiError,
   permissionDenied,
   PermissionDeniedError,
 } from "./error";
-import { getRequestContext, type RequestContext } from "./context";
 
 /**
  * Configuration options for the protected endpoint
@@ -59,6 +60,14 @@ export interface AccessControl {
   requireResource?: 'workspace' | 'project' | 'both';
 }
 
+export interface EnhacedLogContext extends Record<string, any> {
+  requestId: string;
+  requestPath: string;
+  requestMethod: string;
+  functionName: string;
+  requestContext?: RequestContext;
+}
+
 /**
  * Creates a protected API endpoint handler with permission-based authorization for Azure Functions.
  * 
@@ -69,15 +78,15 @@ export interface AccessControl {
  * @remarks
  * The authorization flow works as follows:
  * ```
- * ┌─────────────┐     ┌─────────────────┐     ┌──────────────┐      ┌─────────────────┐
- * │ HTTP Request│────>│ Permission Check│────>│ Verification │─────>│ Handler Executed│
- * └─────────────┘     └─────────────────┘     └──────────────┘      └─────────────────┘
+ * ┌──────────────┐     ┌──────────────────┐     ┌──────────────┐      ┌──────────────────┐
+ * │ HTTP Request │────>│ Permission Check │────>│ Verification │─────>│ Handler Executed │
+ * └──────────────┘     └──────────────────┘     └──────────────┘      └──────────────────┘
  *                              │                       │                      │
  *                              │                       │                      │
  *                              ▼                       ▼                      ▼
- *                     ┌─────────────────┐     ┌─────────────────┐    ┌─────────────────┐
- *                     │ Permission Error│     │ 403 Forbidden   │    │ Other HTTP Error│
- *                     └─────────────────┘     └─────────────────┘    └─────────────────┘
+ *                     ┌─────────────────┐     ┌───────────────┐      ┌──────────────────┐
+ *                     │ Permission Error│     │ 403 Forbidden │      │ Other HTTP Error │
+ *                     └─────────────────┘     └───────────────┘      └──────────────────┘
  * ```
  * 
  * @security
@@ -188,7 +197,7 @@ export function protectEndpoint<T>(
     requestContext?: RequestContext,
   }) => Promise<boolean>,
   access: string | string[] | AccessControl,
-  handler: (req: Request | HttpRequest, context: T) => Promise<HttpResponseInit>,
+  handler: (req: Request | HttpRequest, context: T & EnhacedLogContext) => Promise<HttpResponseInit>,
   options: ProtectEndpointOptions = {}
 ): (req: Request | HttpRequest, context: T) => Promise<HttpResponseInit> {
   // Capture function initialization errors
@@ -229,17 +238,20 @@ export function protectEndpoint<T>(
       const invocationId = (context as InvocationContext)?.invocationId || 'unknown';
 
       // Create enhanced logging context for this specific request
-      const enhancedLogContext = {
+      const enhancedLogContext: EnhacedLogContext = {
         ...logContext,
         functionName,
         requestId: invocationId,
         requestPath: req.url || 'unknown',
-        requestMethod: req.method || 'unknown'
+        requestMethod: req.method || 'unknown',
       };
 
       try {
         // First, get the request context including the user and resource information
         const requestContext = await getRequestContext(req);
+        Object.assign(enhancedLogContext, {
+          requestContext,
+        });
         
         // Validate resource membership if required
         if (requireResource) {
@@ -350,7 +362,7 @@ export function protectEndpoint<T>(
         // HANDLER EXECUTION PHASE      
         // Execute the handler with full error protection
         try {
-          return await handler(req, context);
+          return await handler(req, enhancedLogContext as T & EnhacedLogContext);
         } catch (handlerError) {
           // Log handler execution errors (error level)
           logger?.error?.(
@@ -476,12 +488,12 @@ export function createRequestPermissionChecker(req: Request | HttpRequest) {
  */
 export function secureEndpoint<T>(
   access: string | string[] | AccessControl,
-  handler: (req: Request | HttpRequest, context: T) => Promise<HttpResponseInit>
+  handler: (req: Request | HttpRequest, context: T & EnhacedLogContext) => Promise<HttpResponseInit>
 ) {
   return protectEndpoint(
     // Built-in permission checker that uses request token permissions
     async (permission, req, _, options) => {
-      const requestContext = await getRequestContext(req);
+      const requestContext = options?.requestContext ?? await getRequestContext(req);
       return checkPermission(requestContext.request.permissions, permission, options);
     },
     access,

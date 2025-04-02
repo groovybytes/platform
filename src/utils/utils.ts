@@ -167,3 +167,44 @@ export function generateRandomHex(size: number): string {
   // Convert the random values to a hexadecimal string and return it
   return Buffer.from(uint8arr).toString('hex');
 }
+
+/**
+ * Converts an arbitrary string into a URL-friendly slug.
+ *
+ * This function transforms the provided string into a normalized "slug" that is suitable for use in URLs,
+ * identifiers, or filenames. It performs the following operations:
+ * - Converts the entire string to lowercase.
+ * - Replaces sequences of non-alphanumeric characters (anything other than a-z and 0-9) with a single hyphen.
+ * - Removes any leading or trailing hyphens.
+ *
+ * @remarks
+ * The function is generic and can be used to convert any string into a slug. It is particularly useful for
+ * generating URL slugs from titles, names, or any arbitrary text that might include spaces and special characters.
+ *
+ * The slug generation is achieved using two regular expressions:
+ * - `/[^a-z0-9]+/g` replaces one or more characters that are not lowercase letters or digits with a hyphen.
+ * - `/^-|-$/g` removes any hyphen found at the beginning or end of the string.
+ *
+ * @param input - The input string to be transformed into a slug.
+ * @returns A string representing the generated slug.
+ *
+ * @example
+ * ```ts
+ * const title = "Hello World! This is a test.";
+ * const slug = sluggify(title);
+ * console.log(slug); // Output: "hello-world-this-is-a-test"
+ * ```
+ *
+ * @example
+ * ```ts
+ * const messyString = "   ---A Complex String!! With---Extra---Characters!!!   ";
+ * const slug = sluggify(messyString);
+ * console.log(slug); // Output: "a-complex-string-with-extra-characters"
+ * ```
+ */
+export function sluggify(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
