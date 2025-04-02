@@ -20,6 +20,21 @@ export interface User {
 }
 
 /**
+ * Represents a team
+ */
+export interface Team {
+  id: string;
+  workspaceId: string; // For partitioning and efficient retrieval
+  name: string;
+  description?: string;
+  members: string[];  // User IDs
+  createdAt: string;
+  createdBy: string;
+  modifiedAt: string;
+  modifiedBy: string;
+}
+
+/**
  * Represents a workspace - the top-level organizational unit
  */
 export interface Workspace {
@@ -50,21 +65,6 @@ export interface Workspace {
 }
 
 /**
- * Represents a team
- */
-export interface Team {
-  id: string;
-  workspaceId: string; // For partitioning and efficient retrieval
-  name: string;
-  description?: string;
-  members: string[];  // User IDs
-  createdAt: string;
-  createdBy: string;
-  modifiedAt: string;
-  modifiedBy: string;
-}
-
-/**
  * Workspace settings, including content types, security, and features.
  */
 export interface WorkspaceSettings {
@@ -81,6 +81,24 @@ export interface WorkspaceSettings {
     advancedAnalytics: boolean;
     aiAssistant: boolean;
   };
+}
+
+/**
+ * Represents a user's membership in a workspace or project
+ */
+export interface Membership {
+  id: string;
+  userId: string;
+  resourceType: "workspace" | "project";
+  resourceId: string;
+  membershipType: "member" | "guest";
+  status: "active" | "inactive" | "pending" | "canceled" | "suspended";
+  guest_sponsor_id?: string; // Only applicable for guests
+  expiresAt?: string; // Optional expiration, typically for guests
+  invitedAt: string;
+  invitedBy: string;
+  joinedAt?: string;
+  lastActiveAt?: string;
 }
 
 /**
@@ -110,8 +128,7 @@ export interface AssignedRole {
   roles: string[]; // List of role IDs
   resourceId: string; // The specific resource this role applies to
   resourceType: "workspace" | "project"; // The type of resource
-  is_guest: boolean; // Whether this role assignment is a guest relationship
-  guest_sponsor_id?: string; // ID of the user who sponsored this guest access
+  assignment_type: "guest"; // Whether this role assignment is a guest relationship
   assigned_by: string;
   assigned_at: string;
   expires_at?: string; // Guest access often has an expiration
