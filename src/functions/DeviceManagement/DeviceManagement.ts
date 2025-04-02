@@ -7,7 +7,7 @@ import { nanoid } from 'nanoid';
 import { createItem, queryItems, replaceItem, deleteItem } from '~/utils/cosmos';
 import { createIoTHubDevice, deleteIoTHubDevice } from '~/utils/iothub';
 import { badRequest, handleApiError, unauthorized, forbidden, notFound } from '~/utils/error';
-import { getUserIdFromToken, hasWorkspaceRole } from '~/utils/auth';
+import { getUserIdFromToken, hasWorkspaceRole } from '~/utils/membership';
 import { hasPermission } from '~/utils/permissions';
 
 // Counter for incrementing default device names (in-memory, resets on function restart)

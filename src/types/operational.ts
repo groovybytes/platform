@@ -119,7 +119,7 @@ export interface RoleDefinition {
 }
 
 /**
- * User-Role assignments with additional context for guest access
+ * Assigned-Roles with additional context for guest access
  */
 export interface AssignedRole {
   id: string;

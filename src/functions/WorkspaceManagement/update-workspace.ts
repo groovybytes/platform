@@ -3,8 +3,8 @@ import type { Workspace } from '~/types/operational';
 
 import { handleApiError, forbidden, notFound, badRequest } from '~/utils/error';
 import { readItem, patchItem } from '~/utils/cosmos';
-import { getUserIdFromToken } from '~/utils/auth';
-import { hasWorkspaceRole } from '~/utils/auth';
+import { getUserIdFromToken } from '~/utils/membership';
+import { hasWorkspaceRole } from '~/utils/membership';
 import { app } from '@azure/functions';
 
 /**

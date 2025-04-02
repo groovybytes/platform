@@ -1,7 +1,7 @@
 import type { HttpHandler, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { Permission, Workspace } from '~/types/operational';
 
-import { getUserIdFromToken } from '~/utils/auth';
+import { getUserIdFromToken } from '~/utils/membership';
 import { queryItems, createItem, patchItem } from '~/utils/cosmos';
 import { badRequest, conflict, handleApiError } from '~/utils/error';
 

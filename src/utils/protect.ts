@@ -1,14 +1,15 @@
+// @filename: protect.ts
 import type { HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import type { PermissionOptions } from "./permissions";
 
-import { checkPermission } from "./permissions";
+import { checkPermission, isPermissionAllowed } from "./permissions";
 import {
   forbidden,
   handleApiError,
   permissionDenied,
   PermissionDeniedError,
 } from "./error";
-import { extractUserFromRequest } from "./auth";
+import { getRequestContext, type RequestContext } from "./context";
 
 /**
  * Configuration options for the protected endpoint
@@ -50,6 +51,12 @@ export interface AccessControl {
    * Resource name for error messages
    */
   resourceName?: string;
+
+  /**
+   * Required resource context for validation
+   * - If specified, ensures the user has a valid membership to this resource type
+   */
+  requireResource?: 'workspace' | 'project' | 'both';
 }
 
 /**
@@ -62,9 +69,9 @@ export interface AccessControl {
  * @remarks
  * The authorization flow works as follows:
  * ```
- * ┌─────────────┐     ┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
- * │ HTTP Request│────>│ Permission Check│────>│ Verification │────>│ Handler Executed│
- * └─────────────┘     └─────────────────┘     └──────────────┘     └─────────────────┘
+ * ┌─────────────┐     ┌─────────────────┐     ┌──────────────┐      ┌─────────────────┐
+ * │ HTTP Request│────>│ Permission Check│────>│ Verification │─────>│ Handler Executed│
+ * └─────────────┘     └─────────────────┘     └──────────────┘      └─────────────────┘
  *                              │                       │                      │
  *                              │                       │                      │
  *                              ▼                       ▼                      ▼
@@ -107,33 +114,26 @@ export interface AccessControl {
  * // Basic usage with a single permission
  * const getDocument = protectEndpoint(
  *   checkUserPermission,
- *   "documents:read",
+ *   "project:*:documents:read:allow",
  *   async (req, context) => {
  *     const documentId = req.params.id;
  *     const doc = await documentsService.getDocument(documentId);
  *     return { status: 200, jsonBody: doc };
  *   }
  * );
- * 
- * // Register with Azure Functions
- * app.http('getDocument', {
- *   methods: ['GET'],
- *   authLevel: 'function',
- *   route: 'documents/{id}',
- *   handler: getDocument
- * });
  * ```
  * 
  * @example
  * ```typescript
- * // Advanced usage with multiple permissions
+ * // Advanced usage with multiple permissions and resource context
  * const updateBillingInfo = protectEndpoint(
  *   checkUserPermission,
  *   {
- *     permissions: ["billing:write", "billing:admin"],
+ *     permissions: ["workspace:*:billing:write:allow", "workspace:*:billing:admin:allow"],
  *     match: "any", // User needs at least one of these permissions
  *     resourceName: "billing information",
- *     errorMessage: "You need billing write or admin permissions"
+ *     errorMessage: "You need billing write or admin permissions",
+ *     requireResource: "workspace" // Ensures the user has a valid workspace membership
  *   },
  *   async (req, context) => {
  *     // Handler implementation
@@ -142,34 +142,6 @@ export interface AccessControl {
  *   {
  *     functionName: 'updateBillingInfo',
  *     logContext: { module: 'billing' }
- *   }
- * );
- * ```
- * 
- * @example
- * ```typescript
- * // Error handling behavior example
- * const updateUser = protectEndpoint(
- *   checkUserPermission,
- *   "users:update",
- *   async (req, context) => {
- *     // All of these error scenarios are handled automatically:
- *     
- *     // 1. Validation error → 400 Bad Request
- *     if (!req.body.email) {
- *       throw { name: 'ValidationError', message: 'Email is required' };
- *     }
- *     
- *     // 2. Not found error → 404 Not Found
- *     const user = await userService.findById(req.params.id);
- *     if (!user) {
- *       return notFound('User', req.params.id);
- *     }
- *     
- *     // 3. Database error → 500 Internal Server Error
- *     await userService.update(user, req.body);
- *     
- *     return { status: 200, jsonBody: { success: true } };
  *   }
  * );
  * ```
@@ -209,11 +181,16 @@ export interface AccessControl {
  *    - MITIGATION: Implement appropriate timeouts and consider using durable functions for long operations
  */
 export function protectEndpoint<T>(
-  checkFn: (permission: string | string[], req: any, context: T, options?: any) => Promise<boolean>,
+  checkFn: (permission: string | string[], req: Request | HttpRequest, context: T, options?: { 
+    mode?: 'boolean' | 'throw',
+    match?: 'any' | 'all',
+    errorMessage?: string,
+    requestContext?: RequestContext,
+  }) => Promise<boolean>,
   access: string | string[] | AccessControl,
-  handler: (req: any, context: T) => Promise<HttpResponseInit>,
+  handler: (req: Request | HttpRequest, context: T) => Promise<HttpResponseInit>,
   options: ProtectEndpointOptions = {}
-): (req: any, context: T) => Promise<HttpResponseInit> {
+): (req: Request | HttpRequest, context: T) => Promise<HttpResponseInit> {
   // Capture function initialization errors
   try {
     // Set default options
@@ -241,11 +218,12 @@ export function protectEndpoint<T>(
       permissions,
       match = 'any',
       errorMessage = `You don't have permission to access this endpoint`,
-      resourceName
+      resourceName,
+      requireResource
     } = accessControl;
     
     // Return the fully protected handler function that will never throw
-    return async (req: any, context: T): Promise<HttpResponseInit> => {
+    return async (req: Request | HttpRequest, context: T): Promise<HttpResponseInit> => {
       // Logger
       const logger = (context as InvocationContext) ?? console;
       const invocationId = (context as InvocationContext)?.invocationId || 'unknown';
@@ -259,7 +237,37 @@ export function protectEndpoint<T>(
         requestMethod: req.method || 'unknown'
       };
 
-      try {        
+      try {
+        // First, get the request context including the user and resource information
+        const requestContext = await getRequestContext(req);
+        
+        // Validate resource membership if required
+        if (requireResource) {
+          if (requireResource === 'workspace' || requireResource === 'both') {
+            if (!requestContext.workspace) {
+              // Log resource context failure
+              logger?.info?.(
+                `Missing required workspace context for ${functionName}`,
+                enhancedLogContext
+              );
+              
+              return forbidden('This operation requires a valid workspace context');
+            }
+          }
+          
+          if (requireResource === 'project' || requireResource === 'both') {
+            if (!requestContext.project) {
+              // Log resource context failure
+              logger?.info?.(
+                `Missing required project context for ${functionName}`,
+                enhancedLogContext
+              );
+              
+              return forbidden('This operation requires a valid project context');
+            }
+          }
+        }
+        
         try {
           // Log permission check attempt (debug level)
           logger?.debug?.(
@@ -271,7 +279,8 @@ export function protectEndpoint<T>(
           const allowed = await checkFn(permissions, req, logger as T, { 
             mode: 'boolean',
             match,
-            errorMessage
+            errorMessage,
+            requestContext,
           });
           
           // Strict check - only explicit true is considered authorized
@@ -411,9 +420,9 @@ export function protectEndpoint<T>(
  * @returns A function that executes all checks and returns an error if any fail
  */
 export function combinePermissionChecks<T>(
-  checks: Array<(req: any, context: T) => HttpResponseInit | null>,
-): (req: any, context: T) => HttpResponseInit | null {
-  return (req: any, context: T) => {
+  checks: Array<(req: Request | HttpRequest, context: T) => HttpResponseInit | null>,
+): (req: Request | HttpRequest, context: T) => HttpResponseInit | null {
+  return (req: Request | HttpRequest, context: T) => {
     for (const check of checks) {
       const result = check(req, context);
       if (result !== null) {
@@ -425,19 +434,14 @@ export function combinePermissionChecks<T>(
 }
 
 /**
- * Creates a permission checking function bound to the current request
- * 
- * @remarks
- * This helper eliminates the need to manually extract user permissions
- * for each permission check, making authorization checks cleaner and
- * less error-prone.
+ * Creates a permission checking function bound to the token permissions from the request
  * 
  * @param req - The HTTP request object
- * @returns A function that checks permissions for the current user
+ * @returns A function that checks permissions using the token's permission list
  */
-export async function createRequestPermissionChecker(req: Request | HttpRequest) {
-  // Extract user permissions once
-  const user = await extractUserFromRequest(req);
+export function createRequestPermissionChecker(req: Request | HttpRequest) {
+  // Extract user permissions from the request
+  let _requestContext: RequestContext | null = null;
   
   /**
    * Check if the current user has the specified permission(s)
@@ -446,16 +450,21 @@ export async function createRequestPermissionChecker(req: Request | HttpRequest)
    * @param options - Optional configuration for the permission check
    * @returns Boolean indicating if permission is allowed
    */
-  return function checkUserPermission(
+  return async function checkUserPermission(
     permission: string | string[],
     options: PermissionOptions = {}
-  ): boolean {
-    return checkPermission(user.permissions, permission, options);
+  ): Promise<boolean> {
+    // Extract user permissions from the request
+    if (!_requestContext)  _requestContext = await getRequestContext(req);
+    const requestContext = _requestContext;
+    // Check permissions against the token permissions
+    return checkPermission(requestContext.request.permissions, permission, options);
   };
 }
 
+
 /**
- * Simplified protectEndpoint wrapper that automatically extracts user permissions
+ * Simplified protectEndpoint wrapper that automatically checks permissions from the request token
  * 
  * @remarks
  * This function eliminates the need to provide a custom permission checking function
@@ -467,13 +476,13 @@ export async function createRequestPermissionChecker(req: Request | HttpRequest)
  */
 export function secureEndpoint<T>(
   access: string | string[] | AccessControl,
-  handler: (req: any, context: T) => Promise<HttpResponseInit>
+  handler: (req: Request | HttpRequest, context: T) => Promise<HttpResponseInit>
 ) {
   return protectEndpoint(
-    // Built-in permission checker that extracts user from request
+    // Built-in permission checker that uses request token permissions
     async (permission, req, _, options) => {
-      const user = await extractUserFromRequest(req);
-      return checkPermission(user.permissions, permission, options);
+      const requestContext = await getRequestContext(req);
+      return checkPermission(requestContext.request.permissions, permission, options);
     },
     access,
     handler
@@ -481,13 +490,13 @@ export function secureEndpoint<T>(
 }
 
 /**
- * Creates a middleware-style permission check function for a specific user
+ * Creates a middleware-style permission check function for the current request
  * 
  * @param req - The HTTP request containing user information
  * @returns A function that can check permissions and return HTTP errors or null
  */
 export function createPermissionMiddleware(req: Request | HttpRequest) {
-  const user = extractUserFromRequest(req);
+  let _requestContext: RequestContext | null = null;
   
   /**
    * Check if user has permission to access a resource
@@ -501,7 +510,11 @@ export function createPermissionMiddleware(req: Request | HttpRequest) {
     resourceName?: string
   ): Promise<HttpResponseInit | null> {
     try {
-      const allowed = checkPermission((await user).permissions, permission, {
+      if (!_requestContext) _requestContext = await getRequestContext(req);
+      const requestContext = _requestContext;
+      
+      // Check permissions against the token permissions
+      const allowed = checkPermission(requestContext.request.permissions, permission, {
         mode: 'throw',
         errorMessage: resourceName 
           ? `You don't have permission to access ${resourceName}` 
@@ -522,4 +535,47 @@ export function createPermissionMiddleware(req: Request | HttpRequest) {
       return forbidden('Access denied due to an error');
     }
   };
+}
+
+/**
+ * Validates a user has a valid active membership to a resource
+ * 
+ * @param req - The HTTP request
+ * @param resourceType - The type of resource to validate membership for
+ * @returns Boolean indicating if the user has a valid membership
+ */
+export async function validateResourceMembership(
+  req: Request | HttpRequest,
+  resourceType: 'workspace' | 'project' | 'both'
+): Promise<boolean> {
+  const requestContext = await getRequestContext(req);
+  
+  if (resourceType === 'workspace' || resourceType === 'both') {
+    if (!requestContext.workspace) {
+      return false;
+    }
+  }
+  
+  if (resourceType === 'project' || resourceType === 'both') {
+    if (!requestContext.project) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Helper to check if a specific permission is allowed in the request context
+ * 
+ * @param req - The HTTP request
+ * @param permission - The permission string to check
+ * @returns Boolean indicating if the permission is allowed
+ */
+export async function isPermissionAllowedForRequest(
+  req: Request | HttpRequest,
+  permission: string
+): Promise<boolean> {
+  const requestContext = await getRequestContext(req);
+  return isPermissionAllowed(requestContext.request.permissions, permission);
 }

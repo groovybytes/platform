@@ -11,6 +11,18 @@ export const DEFAULT_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 export const getCurrentTimeInSeconds = () => (Date.now() / 1000) | 0;
 
 /**
+ * Extracts a JWT token from the Authorization header.
+ * 
+ * @param headers The HTTP request headers.
+ * @returns The extracted JWT token, if present; otherwise, null.
+ */
+export function extractTokenFromHeaders(headers: Headers): string | null {
+  const authorizationHeader = headers.get("Authorization") || "";
+  const tokenMatch = authorizationHeader.match(/^Bearer (.+)$/);
+  return tokenMatch ? tokenMatch[1] : null;
+}
+
+/**
  * Derives an encryption key using HKDF.
  * 
  * @param initialKey The initial key material for HKDF.

@@ -9,9 +9,9 @@ let containers: Record<string, Container> = {};
 /**
  * Get or create an instance of the Cosmos DB client
  */
-export function getCosmosClient(): CosmosClient {
+export function getCosmosClient(connection = process.env.COSMOS_CONNECTION_STRING as string): CosmosClient {
   if (!cosmosClient) {
-    cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING as string);
+    cosmosClient = new CosmosClient(connection);
   }
   return cosmosClient;
 }
@@ -19,9 +19,9 @@ export function getCosmosClient(): CosmosClient {
 /**
  * Get the database instance
  */
-export function getDatabase(): Database {
+export function getDatabase(database = process.env.COSMOS_DATABASE_NAME as string): Database {
   if (!databaseInstance) {
-    databaseInstance = getCosmosClient().database(process.env.COSMOS_DATABASE_NAME as string);
+    databaseInstance = getCosmosClient().database(database);
   }
   return databaseInstance;
 }
