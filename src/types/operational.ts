@@ -123,7 +123,8 @@ export interface AssignedRole {
 export interface RoleException {
   id: string;
   type: "role-exceptions",
-  userId: string;
+  resourceId: string; // The userId this exception applies to
+  resourceType: "user"; // The type of resource almost always a user though potentially a team
   permissions: string[]; // "[resource_type]:[resource_id]:[scope]:[action]:[effect]"
   reason: string; // Documentation for audit purposes
   created_by: string;
