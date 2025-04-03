@@ -1,4 +1,4 @@
-import type { HttpHandler, HttpMethod } from "@azure/functions";
+import type { FunctionHandler, HttpHandler, HttpMethod } from "@azure/functions";
 import type { OrchestrationHandler, ActivityHandler } from 'durable-functions';
 
 // Define endpoints structure
@@ -7,6 +7,12 @@ export interface EndpointDefinition {
   route: string;
   methods: HttpMethod[];
   handler: HttpHandler;
+}
+
+export interface TimerDefinition {
+  name: string;
+  schedule: string;
+  handler: FunctionHandler;
 }
 
 /**

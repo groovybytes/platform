@@ -1,6 +1,6 @@
 // @filename: onboarding/activities/send-welcome-email.ts
 import type { ActivityHandler } from 'durable-functions';
-import { sendWelcomeEmail } from '~/utils/email';
+import { sendWelcomeEmail } from '~/email/email';
 
 export interface SendWelcomeEmailInput {
   userId: string;

@@ -1,17 +1,19 @@
 // @filename: user-management/membership/index.ts
-import type { EndpointDefinition } from '~/types/definitions';
+import type { EndpointDefinition, TimerDefinition } from '~/types/definitions';
 
 import { app } from '@azure/functions';
 
 import CreateMembership from './endpoints/create';
-import UpdateMembership from './update';
-import DeleteMembership from './delete';
-import ListMemberships from './list';
-import GetMembership from './get';
+import UpdateMembership from './endpoints/update';
+import AcceptInvitation from './endpoints/invitation/accept';
+import SendReminder from './endpoints/invitation/remind';
+import CleanupFunction from './cron/cleanup';
 
-import AcceptInvitation from './accept-invitation';
-import SendReminder from './send-reminder';
-import RevokeInvitation from './revoke-invitation';
+
+import DeleteMembership from './endpoints/delete';
+import ListMemberships from './endpoints/list';
+import GetMembership from './endpoints/get';
+import RevokeInvitation from './endpoints/invitation/revoke';
 
 // Create the Endpoints object
 export const Endpoints: Record<string, EndpointDefinition> = {
@@ -65,6 +67,15 @@ export const Endpoints: Record<string, EndpointDefinition> = {
   }
 };
 
+// Also export timer functions (not HTTP endpoints)
+export const TimerFunctions: Record<string, TimerDefinition> = {
+  CleanupExpiredInvitations: {
+    name: CleanupFunction.Name,
+    schedule: CleanupFunction.Schedule,
+    handler: CleanupFunction.Handler,
+  }
+};
+
 // Register all HTTP triggers
 Object.values(Endpoints).forEach(endpoint => {
   app.http(endpoint.name, {
@@ -74,6 +85,17 @@ Object.values(Endpoints).forEach(endpoint => {
     handler: endpoint.handler
   });
 });
+
+// Register the timer function
+Object.values(TimerFunctions).forEach(timer => {
+  // Register the timer trigger to run once a day at 3:00 AM
+  app.timer(timer.name, {
+    schedule: timer.schedule, // CRON format: second minute hour day month day-of-week
+    handler: timer.handler,
+    runOnStartup: false     // Don't run immediately when the app starts
+  });
+});
+
 
 // Input/Output type definitions
 export type CreateMembershipInput = typeof CreateMembership.Input;
@@ -101,4 +123,7 @@ export type RevokeInvitationInput = typeof RevokeInvitation.Input;
 export type RevokeInvitationOutput = typeof RevokeInvitation.Output;
 
 // Default export
-export default Endpoints;
+export default {
+  Endpoints,
+  TimerFunctions
+};

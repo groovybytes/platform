@@ -1,7 +1,6 @@
 // @filename: error.ts
 import type { HttpResponseInit } from '@azure/functions';
 import type { ErrorResponse } from "@azure/cosmos";
-import { createReadStream } from 'fs';
 import process from 'node:process';
 
 /**

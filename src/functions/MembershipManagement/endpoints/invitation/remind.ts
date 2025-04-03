@@ -7,8 +7,10 @@ import { badRequest, handleApiError, notFound, conflict } from '~/utils/error';
 import { secureEndpoint } from '~/utils/protect';
 import { getRequestContext } from '~/utils/context';
 import { readItem, patchItem } from '~/utils/cosmos';
-import { sendInvitationEmail } from '~/utils/email';
+import { sendInvitationEmail } from '~/email/email';
 import { ok } from '~/utils/response';
+
+import { BASE_URL } from '~/utils/config';
 
 /**
  * HTTP Trigger to send a reminder for a pending invitation
@@ -74,7 +76,7 @@ const SendReminderHandler: HttpHandler = secureEndpoint(
       }
       
       // Generate invite link
-      const appBaseUrl = process.env.APP_BASE_URL as string;
+      const appBaseUrl = BASE_URL as string;
       const inviteLink = `${appBaseUrl}/accept-invitation?token=${membership.inviteToken}`;
       
       // Update reminder count and time
@@ -96,7 +98,7 @@ const SendReminderHandler: HttpHandler = secureEndpoint(
       
       try {
         await sendInvitationEmail(
-          membership.inviteEmail, 
+          membership.inviteEmail!, 
           resourceName, 
           inviteLink,
           true, // isReminder flag to customize the email template

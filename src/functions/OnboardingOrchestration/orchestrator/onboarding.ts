@@ -1,9 +1,9 @@
 // @filename: onboarding/orchestrators/onboarding-orchestrator.ts
 import type { OrchestrationContext, OrchestrationHandler } from 'durable-functions';
 import type { OnboardingStatus } from '../activities/save-onboarding-status';
+import type { Membership } from '~/types/operational';
 
 import * as df from 'durable-functions';
-import type { Membership } from '~/types/operational';
 import { waitForEventWithRetries } from '~/utils/durable';
 
 import SendWelcomeEmail from '../activities/send-welcome-email';

@@ -1,6 +1,6 @@
 // @filename: onboarding/activities/send-onboarding-abandoned-email.ts
 import type { ActivityHandler } from 'durable-functions';
-import { sendOnboardingAbandonedEmail } from '~/utils/email';
+import { sendOnboardingAbandonedEmail } from '~/email/email';
 
 interface SendOnboardingAbandonedEmailInput {
   userId: string;

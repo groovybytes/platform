@@ -7,7 +7,7 @@ import { badRequest, handleApiError, conflict } from '~/utils/error';
 import { createItem, queryItems, readItem } from '~/utils/cosmos';
 import { assignRolesToUser } from '~/utils/membership';
 import { getRequestContext } from '~/utils/context';
-import { sendInvitationEmail } from '~/utils/email';
+import { sendInvitationEmail } from '~/email/email';
 import { generateRandomHex } from '~/utils/utils';
 import { secureEndpoint } from '~/utils/protect';
 

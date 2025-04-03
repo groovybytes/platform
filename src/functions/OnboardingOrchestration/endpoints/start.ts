@@ -23,9 +23,7 @@ const StartOnboardingHandler: HttpHandler = secureEndpoint(
   },
   async (req: Request | HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
     try {
-      const { request: { userId: currentUserId }, workspace, project } = context?.requestContext ?? await getRequestContext(req);
-
-      const client = df.getClient(context);
+      const { workspace, project } = context?.requestContext ?? await getRequestContext(req);
       const request = req as HttpRequest;
 
       // Parse and validate request body
@@ -55,6 +53,7 @@ const StartOnboardingHandler: HttpHandler = secureEndpoint(
       }
       
       // Start the onboarding orchestration
+      const client = df.getClient(context);
       const instanceId = await client.startNew(OnboardingOrchestrator.Name, {
         input: Object.assign({
           name: name || email.split('@')[0],

@@ -155,6 +155,58 @@ export interface RoleException {
 }
 
 /**
+ * Represents the status and progress of a user's onboarding process
+ */
+export interface OnboardingStatus {
+  id: string;
+  userId: string;
+  type: "invite" | "new_workspace" | "new_project";
+  status: "in_progress" | "completed" | "abandoned";
+  startedAt: string;
+  completedAt?: string;
+  resourceId?: string;
+  resourceType?: "workspace" | "project";
+  orchestrationId?: string;  // ID of the durable orchestration tracking this onboarding
+  
+  // Steps completed in the onboarding process, useful for analytics and troubleshooting
+  steps: {
+    name: string;
+    status: "pending" | "completed" | "failed";
+    timestamp?: string;
+    details?: any;
+  }[];
+  
+  // Additional metadata
+  createdAt: string;
+  modifiedAt: string;
+}
+
+/**
+ * Represents an onboarding task that needs to be completed by a user
+ * This can be linked to the UI to show a checklist of tasks to complete
+ */
+export interface OnboardingTask {
+  id: string;
+  userId: string;
+  resourceId?: string;
+  resourceType?: "workspace" | "project";
+  
+  title: string;
+  description?: string;
+  link?: string;  // URL for the user to complete this task
+  
+  status: "pending" | "completed" | "skipped";
+  completedAt?: string;
+  
+  priority: "high" | "medium" | "low";
+  orderIndex: number;  // For ordering tasks in the UI
+  
+  // Additional metadata
+  createdAt: string;
+  modifiedAt: string;
+}
+
+/**
  * Permission audit logs
  */
 export interface PermissionLog {
