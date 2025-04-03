@@ -128,20 +128,20 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<voi
 /**
  * Send a workspace invitation email
  * @param email Recipient's email
- * @param workspaceName Name of the workspace
+ * @param resourceName Name of the workspace
  * @param inviteLink Invitation link
  */
 export async function sendInvitationEmail(
   email: string, 
-  workspaceName: string,
+  resourceName: string,
   inviteLink: string
 ): Promise<void> {
   await sendEmail({
     to: email,
     content: {
-      subject: `You've been invited to join ${workspaceName}`,
+      subject: `You've been invited to join ${resourceName}`,
       htmlBody: `
-        <p>You've been invited to join <strong>${workspaceName}</strong> on our platform.</p>
+        <p>You've been invited to join <strong>${resourceName}</strong> on our platform.</p>
         
         <p>Click the button below to accept this invitation and get started:</p>
         
@@ -152,7 +152,7 @@ export async function sendInvitationEmail(
         <p>Best regards,<br>The Platform Team</p>
       `,
     textBody: `
-        You've been invited to join ${workspaceName} on our platform.
+        You've been invited to join ${resourceName} on our platform.
         
         Use the following link to accept this invitation and get started:
         ${inviteLink}

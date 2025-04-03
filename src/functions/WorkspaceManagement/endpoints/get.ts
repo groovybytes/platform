@@ -5,6 +5,7 @@ import type { Workspace } from '~/types/operational';
 import { badRequest, handleApiError, notFound } from '~/utils/error';
 import { secureEndpoint } from '~/utils/protect';
 import { readItem } from '~/utils/cosmos';
+import { ok } from '~/utils/response';
 
 /**
  * HTTP Trigger to get a workspace by ID
@@ -31,10 +32,7 @@ const GetWorkspaceHandler: HttpHandler = secureEndpoint(
         return notFound('Workspace', workspaceId);
       }
 
-      return {
-        status: 200,
-        jsonBody: workspace
-      };
+      return ok(workspace);
     } catch (error) {
       context.error('Error getting workspace:', error);
       return handleApiError(error);

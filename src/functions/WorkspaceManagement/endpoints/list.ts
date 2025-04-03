@@ -7,6 +7,7 @@ import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
 import { handleApiError } from '~/utils/error';
 import { readItem } from '~/utils/cosmos';
+import { ok } from '~/utils/response';
 
 /**
  * HTTP Trigger to list all workspaces for the current user
@@ -28,10 +29,7 @@ const ListWorkspacesHandler: HttpHandler = secureEndpoint(
         .map(m => m.resourceId);
       
       if (workspaceIds.length === 0) {
-        return {
-          status: 200,
-          jsonBody: []
-        };
+        return ok([]);
       }
 
       // Get workspaces data
@@ -42,10 +40,7 @@ const ListWorkspacesHandler: HttpHandler = secureEndpoint(
       // Filter out any null results (in case a workspace was deleted)
       const validWorkspaces = workspaces.filter(w => w !== null);
 
-      return {
-        status: 200,
-        jsonBody: validWorkspaces
-      };
+      return ok(validWorkspaces);
     } catch (error) {
       context.error('Error listing workspaces:', error);
       return handleApiError(error);

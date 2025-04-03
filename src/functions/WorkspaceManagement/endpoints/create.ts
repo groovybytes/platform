@@ -8,12 +8,13 @@ import { badRequest, conflict, handleApiError } from '~/utils/error';
 import { assignRolesToUser, createMembership } from '~/utils/membership';
 import { getRequestContext } from '~/utils/context';
 
-import { getDefaultWorkspaceSettings } from './_utils';
+import { getDefaultWorkspaceSettings } from '../_utils';
 import { BASE_URL } from '~/utils/config';
 
 import { secureEndpoint } from '~/utils/protect';
 import { sluggify } from '~/utils/utils';
 import { nanoid } from 'nanoid';
+import { created } from '~/utils/response';
 
 /**
  * HTTP Trigger to create a new workspace
@@ -112,10 +113,7 @@ const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
         }
       }
 
-      return {
-        status: 201,
-        jsonBody: createdWorkspace
-      };
+      return created(createdWorkspace);
     } catch (error) {
       context.error('Error creating workspace:', error);
       return handleApiError(error);

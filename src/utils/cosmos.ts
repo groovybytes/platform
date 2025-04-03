@@ -1,4 +1,4 @@
-import type { Container, Database, ItemDefinition, PatchOperation } from "@azure/cosmos";
+import type { Container, Database, ItemDefinition, PartitionKey, PatchOperation } from "@azure/cosmos";
 import { CosmosClient } from "@azure/cosmos";
 
 // Caching the client instance to improve performance
@@ -69,7 +69,7 @@ export async function queryItems<T>(
 export async function readItem<T extends ItemDefinition>(
   _container: string | Container,
   id: string,
-  partitionKey: string = id
+  partitionKey?: PartitionKey
 ): Promise<T> {
   const container = getContainer(_container);
   const { resource } = await container.item(id, partitionKey).read<T>();
@@ -101,7 +101,7 @@ export async function replaceItem<T extends ItemDefinition>(
   _container: string | Container,
   id: string,
   item: T,
-  partitionKey: string = id
+  partitionKey?: PartitionKey
 ): Promise<T> {
   const container = getContainer(_container);
   const { resource } = await container.item(id, partitionKey).replace<T>(item);
@@ -119,7 +119,7 @@ export async function patchItem<T extends ItemDefinition>(
   _container: string | Container,
   id: string,
   operations:  PatchOperation[],
-  partitionKey: string = id
+  partitionKey?: PartitionKey
 ): Promise<T> {
   const container = getContainer(_container);
   const { resource } = await container.item(id, partitionKey).patch({
@@ -137,7 +137,7 @@ export async function patchItem<T extends ItemDefinition>(
 export async function deleteItem(
   _container: string | Container,
   id: string,
-  partitionKey: string = id
+  partitionKey?: PartitionKey
 ): Promise<void> {
   const container = getContainer(_container);
   await container.item(id, partitionKey).delete();

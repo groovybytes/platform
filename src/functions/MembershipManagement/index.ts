@@ -1,9 +1,9 @@
 // @filename: user-management/membership/index.ts
-import type { EndpointDefinition } from '~/types/endpoint';
+import type { EndpointDefinition } from '~/types/definitions';
 
 import { app } from '@azure/functions';
 
-import CreateMembership from './create';
+import CreateMembership from './endpoints/create';
 import UpdateMembership from './update';
 import DeleteMembership from './delete';
 import ListMemberships from './list';

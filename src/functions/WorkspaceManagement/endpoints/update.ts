@@ -8,6 +8,7 @@ import { patchItem, queryItems, readItem } from '~/utils/cosmos';
 import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
 import { sluggify } from '~/utils/utils';
+import { ok } from '~/utils/response';
 
 /**
  * HTTP Trigger to update a workspace
@@ -102,10 +103,7 @@ const UpdateWorkspaceHandler: HttpHandler = secureEndpoint(
         operations
       );
 
-      return {
-        status: 200,
-        jsonBody: updatedWorkspace
-      };
+      return ok(updatedWorkspace);
     } catch (error) {
       context.error('Error updating workspace:', error);
       return handleApiError(error);

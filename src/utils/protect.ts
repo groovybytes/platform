@@ -8,8 +8,10 @@ import { getRequestContext } from "./context";
 import {
   forbidden,
   handleApiError,
+  misconfiguredError,
   permissionDenied,
   PermissionDeniedError,
+  serverError,
 } from "./error";
 
 /**
@@ -520,18 +522,7 @@ export function protectEndpoint<T>(
         );
         
         // Return a generic server error response
-        return {
-          status: 500,
-          jsonBody: {
-            error: 'Internal server error',
-            message: 'An unexpected error occurred',
-            code: 'INTERNAL_SERVER_ERROR',
-            requestId: invocationId
-          },
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        };
+        return handleApiError(outerError)
       }
     };
   } catch (initError) {
@@ -539,17 +530,7 @@ export function protectEndpoint<T>(
     console.error('CRITICAL: Error during protectEndpoint initialization:', initError);
     
     // Return a function that always returns an error response
-    return async () => ({
-      status: 500,
-      jsonBody: {
-        error: 'Internal server error',
-        message: 'API endpoint misconfiguration',
-        code: 'ENDPOINT_CONFIGURATION_ERROR'
-      },
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    return async () => misconfiguredError(initError);
   }
 }
 

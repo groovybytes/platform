@@ -1,13 +1,13 @@
 // @filename: workspace-invites/index.ts
-import type { EndpointDefinition } from '~/types/endpoint';
+import type { EndpointDefinition } from '~/types/definitions';
 
 import { app } from '@azure/functions';
 
 import InviteToWorkspace from './invite';
 import ResendWorkspaceInvite from './resend';
 import RevokeWorkspaceInvite from './revoke';
-import ListWorkspaceInvites from './list';
-import GetWorkspaceInvite from './get';
+import ListWorkspaceInvites from './endpoints/list';
+import GetWorkspaceInvite from './endpoints/get';
 
 // Create the Endpoints object
 export const Endpoints: Record<string, EndpointDefinition> = {
@@ -99,7 +99,7 @@ interface InviteToWorkspaceResponse {
 
 /**
  * HTTP Trigger to invite a user to a workspace
- * POST /v1/workspaces/{workspaceId}/invites
+ * POST /api/v1/workspaces/{workspaceId}/invites
  */
 const InviteToWorkspaceHandler: HttpHandler = secureEndpoint(
   {
@@ -265,7 +265,7 @@ interface WorkspaceInviteResponse {
 
 /**
  * HTTP Trigger to list all pending invites for a workspace
- * GET /v1/workspaces/{workspaceId}/invites
+ * GET /api/v1/workspaces/{workspaceId}/invites
  */
 const ListWorkspaceInvitesHandler: HttpHandler = secureEndpoint(
   {
@@ -354,7 +354,7 @@ import { secureEndpoint } from '~/utils/protect';
 
 /**
  * HTTP Trigger to get details of a specific workspace invite
- * GET /v1/workspaces/{workspaceId}/invites/{inviteId}
+ * GET /api/v1/workspaces/{workspaceId}/invites/{inviteId}
  */
 const GetWorkspaceInviteHandler: HttpHandler = secureEndpoint(
   {
@@ -441,7 +441,7 @@ import { secureEndpoint } from '~/utils/protect';
 
 /**
  * HTTP Trigger to resend a workspace invitation
- * POST /v1/workspaces/{workspaceId}/invites/{inviteId}/resend
+ * POST /api/v1/workspaces/{workspaceId}/invites/{inviteId}/resend
  */
 const ResendWorkspaceInviteHandler: HttpHandler = secureEndpoint(
   {
@@ -548,7 +548,7 @@ import { secureEndpoint } from '~/utils/protect';
 
 /**
  * HTTP Trigger to revoke a workspace invitation
- * DELETE /v1/workspaces/{workspaceId}/invites/{inviteId}
+ * DELETE /api/v1/workspaces/{workspaceId}/invites/{inviteId}
  */
 const RevokeWorkspaceInviteHandler: HttpHandler = secureEndpoint(
   {

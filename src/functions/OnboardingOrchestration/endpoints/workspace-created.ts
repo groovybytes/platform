@@ -3,12 +3,8 @@ import * as df from 'durable-functions';
 import { app } from '@azure/functions';
 import { badRequest } from '../utils/error';
 import type { OnboardingInput } from './onboardingOrchestrator';
-import type { WorkspaceCreatedEvent } from './onboardingOrchestrator';
+import { ok } from '~/utils/response';
 
-// Interface combining onboarding input and event with instance ID
-interface WorkspaceCreatedRequest extends OnboardingInput, WorkspaceCreatedEvent {
-  instanceId: string; // Orchestration instance ID
-}
 
 /**
  * HTTP Trigger to signal workspace creation to the onboarding orchestration
@@ -35,23 +31,13 @@ const WorkspaceCreatedHandler: HttpHandler = async (
       workspaceId: body.workspaceId
     });
 
-    return {
-      status: 200,
-      jsonBody: {
-        message: 'Workspace creation event raised successfully',
-        instanceId: body.instanceId
-      }
-    };
+    return ok({
+      message: 'Workspace creation event raised successfully',
+      instanceId: body.instanceId
+    });
   } catch (error) {
     context.error('Error raising workspace created event:', error);
-    
-    return {
-      status: 500,
-      jsonBody: { 
-        error: 'Failed to process workspace creation event',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined
-      }
-    };
+    return 
   }
 };
 

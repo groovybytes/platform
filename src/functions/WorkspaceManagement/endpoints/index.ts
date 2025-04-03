@@ -1,5 +1,5 @@
 // @filename: workspace-management/index.ts
-import type { EndpointDefinition } from '~/types/endpoint';
+import type { EndpointDefinition } from '~/types/definitions';
 
 import { app } from '@azure/functions';
 

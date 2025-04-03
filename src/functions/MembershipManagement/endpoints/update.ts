@@ -14,11 +14,12 @@ import { secureEndpoint } from '~/utils/protect';
 import { BASE_URL } from '~/utils/config';
 import { nanoid } from 'nanoid';
 
-import AcceptInvitation from './accept';
+import AcceptInvitation from './invitation/accept';
+import { created } from '~/utils/response';
 
 /**
  * HTTP Trigger to create a membership or invitation
- * POST /v1/memberships
+ * POST /api/v1/memberships
  */
 const CreateMembershipHandler: HttpHandler = secureEndpoint(
   {
@@ -29,7 +30,7 @@ const CreateMembershipHandler: HttpHandler = secureEndpoint(
   async (req: Request | HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
     try {
       // Get request context
-      const { request: { userId: currentUserId }, workspace, project } = await getRequestContext(req);
+      const { request: { userId: currentUserId }, workspace, project } = context?.requestContext ?? await getRequestContext(req);
       
       // Parse request body
       const input = await req.json() as CreateMembershipInput;
@@ -184,15 +185,12 @@ const CreateMembershipHandler: HttpHandler = secureEndpoint(
       }
       
       // Return successful response with membership, user, and invite link
-      return {
-        status: 201,
-        jsonBody: {
-          membership: createdMembership,
-          user,
-          isNewUser,
-          ...(inviteLink && { inviteLink })
-        } as CreateMembershipOutput
-      };
+      return created({
+        membership: createdMembership,
+        user,
+        isNewUser,
+        ...(inviteLink && { inviteLink })
+      } as CreateMembershipOutput);
     } catch (error) {
       context.error('Error creating membership:', error);
       return handleApiError(error);
@@ -225,6 +223,15 @@ export interface CreateMembershipInput {
     isNewUser: boolean;        // Whether a placeholder user was created
   }
   
+
+/**
+ * Input for updating a membership
+ */
+export interface UpdateMembershipInput {
+  status?: "active" | "inactive" | "pending" | "revoked" | "suspended" | "expired";
+  membershipType?: "member" | "guest";
+  expiresAt?: string;
+}
 
 // Register the HTTP trigger
 export default {

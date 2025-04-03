@@ -1,5 +1,5 @@
 // @filename: project-invites/index.ts
-import type { EndpointDefinition } from '~/types/endpoint';
+import type { EndpointDefinition } from '~/types/definitions';
 
 import { app } from '@azure/functions';
 
@@ -99,7 +99,7 @@ interface InviteToProjectResponse {
 
 /**
  * HTTP Trigger to invite a user to a project
- * POST /v1/projects/{projectId}/invites
+ * POST /api/v1/projects/{projectId}/invites
  */
 const InviteToProjectHandler: HttpHandler = secureEndpoint(
   {
@@ -273,7 +273,7 @@ interface ProjectInviteResponse {
 
 /**
  * HTTP Trigger to list all pending invites for a project
- * GET /v1/projects/{projectId}/invites
+ * GET /api/v1/projects/{projectId}/invites
  */
 const ListProjectInvitesHandler: HttpHandler = secureEndpoint(
   {
@@ -362,7 +362,7 @@ import { secureEndpoint } from '~/utils/protect';
 
 /**
  * HTTP Trigger to get details of a specific project invite
- * GET /v1/projects/{projectId}/invites/{inviteId}
+ * GET /api/v1/projects/{projectId}/invites/{inviteId}
  */
 const GetProjectInviteHandler: HttpHandler = secureEndpoint(
   {

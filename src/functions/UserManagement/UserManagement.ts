@@ -1,5 +1,5 @@
 // @filename: user-management/index.ts
-import type { EndpointDefinition } from '~/types/endpoint';
+import type { EndpointDefinition } from '~/types/definitions';
 
 import { app } from '@azure/functions';
 
@@ -96,7 +96,7 @@ function sanitizeUserResponse(user: User): Partial<User> {
 
 /**
  * HTTP Trigger to get the current user's profile
- * GET /v1/users/me
+ * GET /api/v1/users/me
  */
 const GetCurrentUserHandler: HttpHandler = secureEndpoint(
   "system:*:users:read:allow",
@@ -153,7 +153,7 @@ interface UserUpdateRequest {
 
 /**
  * HTTP Trigger to update the current user's profile
- * PATCH /v1/users/me
+ * PATCH /api/v1/users/me
  */
 const UpdateCurrentUserHandler: HttpHandler = secureEndpoint(
   "system:*:users:update:allow",
@@ -255,7 +255,7 @@ function sanitizeUserResponse(user: User): Partial<User> {
 
 /**
  * HTTP Trigger to get a user by ID
- * GET /v1/users/{id}
+ * GET /api/v1/users/{id}
  */
 const GetUserByIdHandler: HttpHandler = secureEndpoint(
   "system:*:users:read:allow",
@@ -313,7 +313,7 @@ interface UserListResponse {
 
 /**
  * HTTP Trigger to list all users
- * GET /v1/users
+ * GET /api/v1/users
  */
 const ListUsersHandler: HttpHandler = secureEndpoint(
   "system:*:users:list:allow",
@@ -394,7 +394,7 @@ interface UserListResponse {
 
 /**
  * HTTP Trigger to list all users in a workspace
- * GET /v1/workspaces/{workspaceId}/users
+ * GET /api/v1/workspaces/{workspaceId}/users
  */
 const ListWorkspaceUsersHandler: HttpHandler = secureEndpoint(
   {
@@ -520,7 +520,7 @@ interface UserListResponse {
 
 /**
  * HTTP Trigger to list all users in a project
- * GET /v1/projects/{projectId}/users
+ * GET /api/v1/projects/{projectId}/users
  */
 const ListProjectUsersHandler: HttpHandler = secureEndpoint(
   {

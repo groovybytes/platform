@@ -1,6 +1,8 @@
 // @filename: error.ts
 import type { HttpResponseInit } from '@azure/functions';
 import type { ErrorResponse } from "@azure/cosmos";
+import { createReadStream } from 'fs';
+import process from 'node:process';
 
 /**
  * Standard API error response format
@@ -103,6 +105,25 @@ export function serverError(error: any): HttpResponseInit {
       stack: error.stack
     } : undefined,
     'INTERNAL_SERVER_ERROR'
+  );
+}
+
+/**
+ * Create a 500 Internal Server Error response for misconfigured endpoints
+ * @param error Error object
+ */
+export function misconfiguredError(error: any): HttpResponseInit {
+  // In production, don't expose internal error details
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  return createErrorResponse(
+    500,
+    'Internal server error',
+    isDevelopment ? {
+      message: error.message ?? "API endpoint misconfiguration",
+      stack: error.stack
+    } : undefined,
+    'ENDPOINT_CONFIGURATION_ERROR'
   );
 }
 
