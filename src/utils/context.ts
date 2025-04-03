@@ -1,4 +1,4 @@
-// @filename: auth.ts
+// @filename: utils/context.ts
 import type { HttpRequest } from "@azure/functions";
 import type { ExtendedJWT } from "./tokens";
 

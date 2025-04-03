@@ -7,7 +7,7 @@ import type { PatchOperation } from '@azure/cosmos';
 import { handleApiError, badRequest, notFound, permissionDenied } from '~/utils/error';
 import { secureEndpoint } from '~/utils/protect';
 import { getRequestContext } from '~/utils/context';
-import { readItem, patchItem } from '~/utils/cosmos';
+import { readItem, patchItem } from '~/utils/cosmos/utils';
 
 import { sanitizeUserResponse } from '../_utils';
 import { ok } from '~/utils/response';

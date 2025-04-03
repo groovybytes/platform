@@ -3,7 +3,7 @@ import type { ActivityHandler } from 'durable-functions';
 import type { User, Project } from '~/types/operational';
 import { BASE_URL } from '~/utils/config';
 
-import { readItem } from '~/utils/cosmos';
+import { readItem } from '~/utils/cosmos/utils';
 import { sendEmail } from '~/utils/email';
 
 interface SendProjectWelcomeResourcesEmailInput {

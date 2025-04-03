@@ -3,7 +3,7 @@ import type { OnboardingStatus } from '~/types/operational';
 import type { ActivityHandler } from 'durable-functions';
 import type { PatchOperation } from '@azure/cosmos';
 
-import { createItem, patchItem, queryItems } from '~/utils/cosmos';
+import { createItem, patchItem, queryItems } from '~/utils/cosmos/utils';
 import { nanoid } from 'nanoid';
 
 /**

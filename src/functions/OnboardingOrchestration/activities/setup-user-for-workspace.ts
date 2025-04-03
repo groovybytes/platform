@@ -3,7 +3,7 @@ import type { PatchOperation } from '@azure/cosmos';
 import type { ActivityHandler } from 'durable-functions';
 import type { User, Membership, Workspace } from '~/types/operational';
 
-import { readItem, queryItems, patchItem } from '~/utils/cosmos';
+import { readItem, queryItems, patchItem } from '~/utils/cosmos/utils';
 
 interface SetupUserForWorkspaceInput {
   userId: string;

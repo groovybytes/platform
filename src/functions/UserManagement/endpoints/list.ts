@@ -6,7 +6,7 @@ import type { User, Membership } from '~/types/operational';
 import { handleApiError, badRequest } from '~/utils/error';
 import { secureEndpoint } from '~/utils/protect';
 import { getRequestContext } from '~/utils/context';
-import { queryItems } from '~/utils/cosmos';
+import { queryItems } from '~/utils/cosmos/utils';
 
 import { sanitizeUserResponse } from '../_utils';
 import { ok } from '~/utils/response';

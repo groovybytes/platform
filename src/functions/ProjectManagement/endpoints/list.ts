@@ -6,7 +6,7 @@ import { getUserMemberships } from '~/utils/membership';
 import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
 import { handleApiError } from '~/utils/error';
-import { readItem } from '~/utils/cosmos';
+import { readItem } from '~/utils/cosmos/utils';
 import { ok } from '~/utils/response';
 
 /**

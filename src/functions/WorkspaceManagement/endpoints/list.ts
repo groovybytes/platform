@@ -1,3 +1,4 @@
+// @filename: workspace-management/endpoints/list.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { EnhacedLogContext } from '~/utils/protect';
 import type { Workspace } from '~/types/operational';
@@ -6,7 +7,7 @@ import { getUserMemberships } from '~/utils/membership';
 import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
 import { handleApiError } from '~/utils/error';
-import { readItem } from '~/utils/cosmos';
+import { readItem } from '~/utils/cosmos/utils';
 import { ok } from '~/utils/response';
 
 /**

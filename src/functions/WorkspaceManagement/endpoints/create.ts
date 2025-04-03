@@ -1,8 +1,11 @@
+// @filename: workspace-management/endpoints/create.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { EnhacedLogContext } from '~/utils/protect';
 import type { Workspace } from '~/types/operational';
 
-import { queryItems, createItem, patchItem } from '~/utils/cosmos';
+import OnboardingEventNotification from '~/functions/OnboardingOrchestration/endpoints/event/event';
+
+import { queryItems, createItem, patchItem } from '~/utils/cosmos/utils';
 import { badRequest, conflict, handleApiError } from '~/utils/error';
 
 import { assignRolesToUser, createMembership } from '~/utils/membership';
@@ -95,7 +98,7 @@ const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
       const instanceId = url.searchParams.get('onboardingInstance');
       if (instanceId) {
         // Call the workflow endpoint to signal workspace creation
-        const eventRequest = await fetch(`${BASE_URL}/api/onboarding/workspace-created`, {
+        const eventRequest = await fetch(`${BASE_URL}/api/${OnboardingEventNotification.Route}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

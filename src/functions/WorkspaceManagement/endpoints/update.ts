@@ -1,10 +1,11 @@
+// @filename: workspace-management/endpoints/update.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { EnhacedLogContext } from '~/utils/protect';
 import type { Workspace } from '~/types/operational';
 import type { PatchOperation } from '@azure/cosmos';
 
 import { badRequest, conflict, handleApiError, notFound } from '~/utils/error';
-import { patchItem, queryItems, readItem } from '~/utils/cosmos';
+import { patchItem, queryItems, readItem } from '~/utils/cosmos/utils';
 import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
 import { sluggify } from '~/utils/utils';

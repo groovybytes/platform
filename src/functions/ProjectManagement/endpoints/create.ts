@@ -2,7 +2,7 @@ import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, Invocation
 import type { EnhacedLogContext } from '~/utils/protect';
 import type { Workspace } from '~/types/operational';
 
-import { queryItems, createItem, patchItem } from '~/utils/cosmos';
+import { queryItems, createItem, patchItem } from '~/utils/cosmos/utils';
 import { badRequest, conflict, handleApiError } from '~/utils/error';
 
 import { assignRolesToUser, createMembership } from '~/utils/membership';

@@ -9,7 +9,7 @@ import { badRequest, handleApiError, notFound, unauthorized } from '~/utils/erro
 import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
 
-import { queryItems, readItem, patchItem } from '~/utils/cosmos';
+import { queryItems, readItem, patchItem } from '~/utils/cosmos/utils';
 import * as df from 'durable-functions';
 
 import { ok } from '~/utils/response';

@@ -1,6 +1,6 @@
 // @filename: onboarding/activities/send-welcome-resources.ts
 import type { ActivityHandler } from 'durable-functions';
-import { readItem } from '~/utils/cosmos';
+import { readItem } from '~/utils/cosmos/utils';
 import { sendEmail } from '~/utils/email';
 
 interface SendWelcomeResourcesEmailInput {

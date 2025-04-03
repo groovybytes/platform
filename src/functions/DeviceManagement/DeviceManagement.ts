@@ -4,7 +4,7 @@ import type { Device, RegisterDeviceInput, UpdateDeviceInput } from '~/types/dev
 
 import { app } from '@azure/functions';
 import { nanoid } from 'nanoid';
-import { createItem, queryItems, replaceItem, deleteItem } from '~/utils/cosmos';
+import { createItem, queryItems, replaceItem, deleteItem } from '~/utils/cosmos/utils';
 import { createIoTHubDevice, deleteIoTHubDevice } from '~/utils/iothub';
 import { badRequest, handleApiError, unauthorized, forbidden, notFound } from '~/utils/error';
 import { getUserIdFromToken, hasWorkspaceRole } from '~/utils/membership';

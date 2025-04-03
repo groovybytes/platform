@@ -2,9 +2,9 @@
 import type { FunctionHandler, InvocationContext } from '@azure/functions';
 import type { Membership } from '~/types/operational';
 
-import { queryItems, patchItem } from '~/utils/cosmos';
+import { queryItems, patchItem } from '~/utils/cosmos/utils';
 import { sendInvitationExpiredEmail } from '~/email/email';
-import { readItem } from '~/utils/cosmos';
+import { readItem } from '~/utils/cosmos/utils';
 
 /**
  * Timer-triggered function to cleanup expired invitations

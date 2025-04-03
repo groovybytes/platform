@@ -2,7 +2,7 @@
 import type { ActivityHandler } from 'durable-functions';
 import type { User, Membership, Project } from '~/types/operational';
 
-import { readItem, queryItems, patchItem } from '~/utils/cosmos';
+import { readItem, queryItems, patchItem } from '~/utils/cosmos/utils';
 
 interface SetupUserForProjectInput {
   userId: string;

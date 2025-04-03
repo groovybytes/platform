@@ -9,7 +9,7 @@ import {
   createItem,  
   patchItem, 
   deleteItem 
-} from './cosmos';
+} from './cosmos/utils';
 
 
 // Constants for database and containers

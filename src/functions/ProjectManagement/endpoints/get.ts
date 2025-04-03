@@ -4,7 +4,7 @@ import type { Workspace } from '~/types/operational';
 
 import { badRequest, handleApiError, notFound } from '~/utils/error';
 import { secureEndpoint } from '~/utils/protect';
-import { readItem } from '~/utils/cosmos';
+import { readItem } from '~/utils/cosmos/utils';
 import { ok } from '~/utils/response';
 
 /**

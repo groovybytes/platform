@@ -2,7 +2,7 @@
 import type { ActivityHandler } from 'durable-functions';
 import type { Membership } from '~/types/operational';
 
-import { queryItems, patchItem } from '~/utils/cosmos';
+import { queryItems, patchItem } from '~/utils/cosmos/utils';
 
 export interface ProcessPendingInvitesInput {
   userId: string;

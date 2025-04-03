@@ -2,7 +2,7 @@
 import type { ActivityHandler } from 'durable-functions';
 import type { User, Workspace } from '~/types/operational';
 
-import { readItem, createItem } from '~/utils/cosmos';
+import { readItem, createItem } from '~/utils/cosmos/utils';
 import { sendEmail } from '~/utils/email';
 import { nanoid } from 'nanoid';
 

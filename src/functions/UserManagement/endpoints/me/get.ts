@@ -7,7 +7,7 @@ import { sanitizeUserResponse } from '../../_utils';
 import { handleApiError, notFound } from '~/utils/error';
 import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
-import { readItem } from '~/utils/cosmos';
+import { readItem } from '~/utils/cosmos/utils';
 import { ok } from '~/utils/response';
 
 /**

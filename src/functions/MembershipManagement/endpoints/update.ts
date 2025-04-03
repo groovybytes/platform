@@ -4,7 +4,7 @@ import type { Membership, Project, User, Workspace } from '~/types/operational';
 import type { EnhacedLogContext } from '~/utils/protect';
 
 import { badRequest, handleApiError, conflict } from '~/utils/error';
-import { createItem, queryItems, readItem } from '~/utils/cosmos';
+import { createItem, queryItems, readItem } from '~/utils/cosmos/utils';
 import { assignRolesToUser } from '~/utils/membership';
 import { getRequestContext } from '~/utils/context';
 import { sendInvitationEmail } from '~/email/email';

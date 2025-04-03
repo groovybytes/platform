@@ -2,7 +2,7 @@
 import type { ActivityHandler } from 'durable-functions';
 import type { Workspace } from '~/types/operational';
 
-import { readItem, createItem } from '~/utils/cosmos';
+import { readItem, createItem } from '~/utils/cosmos/utils';
 import { nanoid } from 'nanoid';
 
 interface SetupInitialWorkspaceContentInput {

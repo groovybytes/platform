@@ -2,7 +2,7 @@
 import type { ActivityHandler } from 'durable-functions';
 import type { User, Workspace } from '~/types/operational';
 
-import { readItem } from '~/utils/cosmos';
+import { readItem } from '~/utils/cosmos/utils';
 import { sendEmail } from '~/utils/email';
 
 /**
