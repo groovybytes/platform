@@ -1,7 +1,8 @@
 // @filename: onboarding/orchestrators/onboarding-orchestrator.ts
 import type { OrchestrationContext, OrchestrationHandler } from 'durable-functions';
 import type { OnboardingStatus } from '../activities/save-onboarding-status';
-import type { Membership } from '~/types/operational';
+
+import OnboardingEventNotification from '../endpoints/event/event';
 
 import * as df from 'durable-functions';
 import { waitForEventWithRetries } from '~/utils/durable';
@@ -305,7 +306,7 @@ function* handleProjectOnboarding(
   }
   
   // Wait for project creation
-  const projectCreationResult = yield* waitForEventWithRetries<OnboardingInput, ProjectCreatedEvent>(
+  const projectCreationResult = yield* waitForEventWithRetries<OnboardingInput, ResourceCre>(
     context,
     {
       eventName: `ProjectCreated-${userId}-${workspaceId}`,

@@ -3,11 +3,11 @@ import type { EndpointDefinition } from '~/types/definitions';
 
 import { app } from '@azure/functions';
 
-import DeleteWorkspace from './delete';
-import CreateWorkspace from './create';
-import UpdateWorkspace from './update';
-import ListWorkspace from './list';
-import GetWorkspace from './get';
+import DeleteWorkspace from './endpoints/delete';
+import CreateWorkspace from './endpoints/create';
+import UpdateWorkspace from './endpoints/update';
+import ListWorkspace from './endpoints/list';
+import GetWorkspace from './endpoints/get';
 
 // Create the Endpoints object
 export const Endpoints: Record<string, EndpointDefinition> = {
