@@ -5,13 +5,6 @@ import type { User, Workspace } from '~/types/operational';
 import { readItem } from '~/utils/cosmos';
 import { sendEmail } from '~/utils/email';
 
-interface SendProjectReminderEmailInput {
-  userId: string;
-  workspaceId: string;
-  attempt: number;
-  maxAttempts: number;
-}
-
 /**
  * Sends a reminder email to create a project during onboarding
  */
@@ -112,6 +105,13 @@ const SendProjectReminderEmailHandler: ActivityHandler = async (
     workspaceName: workspace.name
   };
 };
+
+interface SendProjectReminderEmailInput {
+  userId: string;
+  workspaceId: string;
+  attempt: number;
+  maxAttempts: number;
+}
 
 // Export the activity definition
 export default {

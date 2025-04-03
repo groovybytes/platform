@@ -1,6 +1,6 @@
 // @filename: onboarding/activities/send-workspace-reminder-email.ts
 import type { ActivityHandler } from 'durable-functions';
-import { sendWorkspaceReminderEmail } from '~/utils/email';
+import { sendWorkspaceReminderEmail } from '~/email/email';
 
 interface SendWorkspaceReminderEmailInput {
   userId: string;

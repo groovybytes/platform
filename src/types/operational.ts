@@ -182,31 +182,6 @@ export interface OnboardingStatus {
 }
 
 /**
- * Represents an onboarding task that needs to be completed by a user
- * This can be linked to the UI to show a checklist of tasks to complete
- */
-export interface OnboardingTask {
-  id: string;
-  userId: string;
-  resourceId?: string;
-  resourceType?: "workspace" | "project";
-  
-  title: string;
-  description?: string;
-  link?: string;  // URL for the user to complete this task
-  
-  status: "pending" | "completed" | "skipped";
-  completedAt?: string;
-  
-  priority: "high" | "medium" | "low";
-  orderIndex: number;  // For ordering tasks in the UI
-  
-  // Additional metadata
-  createdAt: string;
-  modifiedAt: string;
-}
-
-/**
  * Permission audit logs
  */
 export interface PermissionLog {

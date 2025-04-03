@@ -38,6 +38,7 @@ const OnboardingEventNotification: HttpHandler = secureEndpoint(
           .join(', ');
         return badRequest(`Validation error: ${errorMessages}`);
       }
+      
       const input = parseResult.data;
       const { eventType, resourceType, resourceId, instanceId } = input;
 

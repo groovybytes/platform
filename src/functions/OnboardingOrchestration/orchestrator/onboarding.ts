@@ -1,8 +1,7 @@
 // @filename: onboarding/orchestrators/onboarding-orchestrator.ts
 import type { OrchestrationContext, OrchestrationHandler } from 'durable-functions';
-import type { OnboardingStatus } from '../activities/save-onboarding-status';
-
-import OnboardingEventNotification from '../endpoints/event/event';
+import type { SupportedEventMap } from '../endpoints/event/_schema';
+import type { OnboardingStatus } from '~/types/operational';
 
 import * as df from 'durable-functions';
 import { waitForEventWithRetries } from '~/utils/durable';
@@ -13,6 +12,13 @@ import SendWelcomeResourcesEmail from '../activities/send-welcome-resources-emai
 import SendWorkspaceReminderEmail from '../activities/send-workspace-reminder-email';
 import SendOnboardingAbandonedEmail from '../activities/send-onboarding-abandoned-email';
 import SetupInitialWorkspaceContent from '../activities/setup-initial-workspace-content';
+
+import SendProjectReminderEmail from '../activities/send-project-reminder-email';
+import HandleAbandonedProject from '../activities/handle-abandoned-project';
+import SetupInitialProjectContent from '../activities/setup-initial-project-content';
+import SendProjectWelcomeResourcesEmail from '../activities/send-project-welcome-resources-email';
+import SetupUserForWorkspace from '../activities/setup-user-for-workspace';
+import SetupUserForProject from '../activities/setup-user-for-project';
 
 /**
  * Durable function orchestrator for user onboarding processes.
@@ -28,7 +34,7 @@ const OnboardingOrchestratorHandler: OrchestrationHandler = function* (context: 
   const { type, userId, email, name } = input;
   
   // Track the onboarding status in a consistent way
-  let status: OnboardingStatus = {
+  let status: Omit<OnboardingStatus, 'id' | 'createdAt' | 'modifiedAt'> = {
     userId,
     type,
     status: 'in_progress',
@@ -123,7 +129,7 @@ const OnboardingOrchestratorHandler: OrchestrationHandler = function* (context: 
 function* handleInviteOnboarding(
   context: OrchestrationContext,
   input: OnboardingInput,
-  status: OnboardingStatus
+  status: Omit<OnboardingStatus, 'id' | 'createdAt' | 'modifiedAt'>
 ): Generator<df.Task, void, any> {
   const { userId, resourceId, resourceType, membershipId } = input;
   
@@ -144,10 +150,10 @@ function* handleInviteOnboarding(
   // Process the new membership based on resource type
   if (resourceType === 'workspace') {
     // Set up workspace for the user
-    yield context.df.callActivity('SetupUserWorkspace', {
+    yield context.df.callActivity(SetupUserForWorkspace.Name, {
       userId,
       workspaceId: resourceId
-    });
+    } as typeof SetupUserForWorkspace.Input);
     
     status.steps.push({
       name: 'workspace_setup',
@@ -156,10 +162,10 @@ function* handleInviteOnboarding(
     });
   } else if (resourceType === 'project') {
     // Set up project for the user
-    yield context.df.callActivity('SetupUserProject', {
+    yield context.df.callActivity(SetupUserForProject.Name, {
       userId,
       projectId: resourceId
-    });
+    } as typeof SetupUserForProject.Input);
     
     status.steps.push({
       name: 'project_setup',
@@ -188,7 +194,7 @@ function* handleInviteOnboarding(
 function* handleWorkspaceOnboarding(
   context: OrchestrationContext,
   input: OnboardingInput,
-  status: OnboardingStatus
+  status: Omit<OnboardingStatus, 'id' | 'createdAt' | 'modifiedAt'>
 ): Generator<df.Task, void, any> {
   const { userId, email, name } = input;
   
@@ -197,7 +203,7 @@ function* handleWorkspaceOnboarding(
     userId,
     email,
     name: name || email.split('@')[0]
-  });
+  } as typeof SendWelcomeEmail.Input);
   
   status.steps.push({
     name: 'welcome_email_sent',
@@ -205,11 +211,11 @@ function* handleWorkspaceOnboarding(
     timestamp: context.df.currentUtcDateTime.toISOString()
   });
   
-  // Wait for workspace creation with retries and reminders
-  const workspaceCreationResult = yield* waitForEventWithRetries<OnboardingInput, WorkspaceCreatedEvent>(
+  // Wait for resource.created event with retries and reminders
+  const workspaceCreationResult = yield* waitForEventWithRetries<OnboardingInput, SupportedEventMap['resource.created']>(
     context,
     {
-      eventName: `WorkspaceCreated-${userId}`,
+      eventName: 'resource.created',
       retryOptions: new df.RetryOptions(24 * 60 * 60 * 1000, 5), // 24 hours timeout, 5 retries
       originalInput: input,
       
@@ -254,7 +260,7 @@ function* handleWorkspaceOnboarding(
   }
   
   // Get the workspace ID from the event
-  const workspaceId = workspaceCreationResult.eventData!.workspaceId;
+  const workspaceId = workspaceCreationResult.eventData!.resourceId;
   status.resourceId = workspaceId;
   status.resourceType = 'workspace';
   
@@ -264,6 +270,31 @@ function* handleWorkspaceOnboarding(
     timestamp: context.df.currentUtcDateTime.toISOString(),
     details: { workspaceId }
   });
+  
+  // Wait for resource.initialized event
+  const workspaceInitializedResult = yield* waitForEventWithRetries<OnboardingInput, SupportedEventMap['resource.initialized']>(
+    context,
+    {
+      eventName: 'resource.initialized',
+      retryOptions: new df.RetryOptions(12 * 60 * 60 * 1000, 3), // 12 hours timeout, 3 retries
+      originalInput: input
+    }
+  );
+  
+  if (!workspaceInitializedResult.succeeded) {
+    // Handle initialization failure
+    status.steps.push({
+      name: 'workspace_initialization',
+      status: 'failed',
+      timestamp: context.df.currentUtcDateTime.toISOString(),
+      details: {
+        retryCount: workspaceInitializedResult.retryCount,
+        status: workspaceInitializedResult.status
+      }
+    });
+    
+    throw new Error('Workspace initialization timed out');
+  }
   
   // Set up initial content
   yield context.df.callActivity(SetupInitialWorkspaceContent.Name, {
@@ -297,7 +328,7 @@ function* handleWorkspaceOnboarding(
 function* handleProjectOnboarding(
   context: OrchestrationContext,
   input: OnboardingInput,
-  status: OnboardingStatus
+  status: Omit<OnboardingStatus, 'id' | 'createdAt' | 'modifiedAt'>
 ): Generator<df.Task, void, any> {
   const { userId, workspaceId } = input;
   
@@ -305,20 +336,20 @@ function* handleProjectOnboarding(
     throw new Error('Workspace ID is required for project onboarding');
   }
   
-  // Wait for project creation
-  const projectCreationResult = yield* waitForEventWithRetries<OnboardingInput, ResourceCre>(
+  // Wait for resource.created event for project
+  const projectCreationResult = yield* waitForEventWithRetries<OnboardingInput, SupportedEventMap['resource.created']>(
     context,
     {
-      eventName: `ProjectCreated-${userId}-${workspaceId}`,
+      eventName: 'resource.created',
       retryOptions: new df.RetryOptions(24 * 60 * 60 * 1000, 3), // 24 hours timeout, 3 retries
       originalInput: input,
       
       // Send reminder for project creation
       onRetryActivity: {
         name: SendProjectReminderEmail.Name,
-        getInput: (input, retryCount, maxRetries): typeof SendProjectReminderEmail.Input => ({
-          userId: input.userId,
-          workspaceId: input.workspaceId,
+        getInput: (_, retryCount, maxRetries): typeof SendProjectReminderEmail.Input => ({
+          userId,
+          workspaceId,
           attempt: retryCount,
           maxAttempts: maxRetries
         })
@@ -328,8 +359,8 @@ function* handleProjectOnboarding(
       onAbandonedActivity: {
         name: HandleAbandonedProject.Name,
         getInput: (input, maxRetries): typeof HandleAbandonedProject.Input => ({
-          userId: input.userId,
-          workspaceId: input.workspaceId
+          userId,
+          workspaceId
         })
       }
     }
@@ -351,7 +382,13 @@ function* handleProjectOnboarding(
   }
   
   // Get the project ID from the event
-  const projectId = projectCreationResult.eventData!.projectId;
+  const projectId = projectCreationResult.eventData!.resourceId;
+  
+  // Verify this is a project resource
+  if (projectCreationResult.eventData!.resourceType !== 'project') {
+    throw new Error('Expected project resource type but received: ' + projectCreationResult.eventData!.resourceType);
+  }
+  
   status.resourceId = projectId;
   status.resourceType = 'project';
   
@@ -361,6 +398,31 @@ function* handleProjectOnboarding(
     timestamp: context.df.currentUtcDateTime.toISOString(),
     details: { projectId, workspaceId }
   });
+  
+  // Wait for resource.initialized event
+  const projectInitializedResult = yield* waitForEventWithRetries<OnboardingInput, SupportedEventMap['resource.initialized']>(
+    context,
+    {
+      eventName: 'resource.initialized',
+      retryOptions: new df.RetryOptions(12 * 60 * 60 * 1000, 3), // 12 hours timeout, 3 retries
+      originalInput: input
+    }
+  );
+  
+  if (!projectInitializedResult.succeeded) {
+    // Handle initialization failure
+    status.steps.push({
+      name: 'project_initialization',
+      status: 'failed',
+      timestamp: context.df.currentUtcDateTime.toISOString(),
+      details: {
+        retryCount: projectInitializedResult.retryCount,
+        status: projectInitializedResult.status
+      }
+    });
+    
+    throw new Error('Project initialization timed out');
+  }
   
   // Set up initial project content
   yield context.df.callActivity(SetupInitialProjectContent.Name, {
@@ -376,11 +438,11 @@ function* handleProjectOnboarding(
   });
   
   // Send project welcome resources
-  yield context.df.callActivity(SendProjectWelcomeResources.Name, {
+  yield context.df.callActivity(SendProjectWelcomeResourcesEmail.Name, {
     userId,
     projectId,
     workspaceId
-  } as typeof SendProjectWelcomeResources.Input);
+  } as typeof SendProjectWelcomeResourcesEmail.Input);
   
   status.steps.push({
     name: 'welcome_resources_sent',

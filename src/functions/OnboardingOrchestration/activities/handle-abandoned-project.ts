@@ -6,11 +6,6 @@ import { readItem, createItem } from '~/utils/cosmos';
 import { sendEmail } from '~/utils/email';
 import { nanoid } from 'nanoid';
 
-interface HandleAbandonedProjectInput {
-  userId: string;
-  workspaceId: string;
-}
-
 /**
  * Handles the case when a user abandons the project creation process
  * Sets up a default project and notifies the user
@@ -127,6 +122,11 @@ const HandleAbandonedProjectHandler: ActivityHandler = async (
     recipient: user.emails.primary
   };
 };
+
+interface HandleAbandonedProjectInput {
+  userId: string;
+  workspaceId: string;
+}
 
 // Export the activity definition
 export default {
