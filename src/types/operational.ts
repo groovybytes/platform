@@ -292,3 +292,120 @@ export interface ProjectSettings {
     aiAssistant: boolean;
   };
 }
+
+/**
+ * Device representation in the operational database
+ */
+export interface Device {
+  id: string;
+  projectId: string;  // Primary scope - removing workspaceId for easier transfers
+  deviceId: string;   // Unique identifier within IoT Hub
+  deviceName: string;
+  sensorType: string;
+  location: string;
+  purpose: string;
+  connectionString: string;
+  status: "registered" | "connected" | "disconnected" | "error";
+  processingState: "active" | "processing" | "analyzing" | "maintenance";
+  lastDataReceived?: string; // ISO timestamp of most recent data
+  metadata?: Record<string, any>;
+  createdAt: string;
+  createdBy: string;
+  modifiedAt: string;
+  modifiedBy: string;
+}
+
+/**
+ * Asset representation for uploaded files in the operational database
+ */
+export interface Asset {
+  id: string;
+  projectId: string;  // Primary scope - no workspaceId
+  name: string;
+  type: string;  // File MIME type
+  size: number;  // Size in bytes
+  url: string;   // Storage URL (e.g., Azure Blob URL)
+  status: "active" | "archived" | "deleted";
+  processingState: "uploading" | "validating" | "enriching" | "analyzing" | "processed" | "error";
+  processingProgress?: number;  // 0-100 percentage
+  processingDetails?: {
+    error?: string;
+    stage?: string;
+    startedAt?: string;
+    completedAt?: string;
+  };
+  metadata?: Record<string, any>;
+  createdAt: string;
+  createdBy: string;
+  modifiedAt: string;
+  modifiedBy: string;
+}
+
+/**
+ * Notification representation in the operational database
+ */
+export interface Notification {
+  id: string;
+  projectId: string;  // Scope to project
+  type: "alert" | "info" | "warning" | "success" | "error";
+  title: string;
+  message: string;
+  source: "system" | "device" | "analysis" | "user";
+  sourceId?: string;  // ID of the source entity (device, user, etc.)
+  severity: "low" | "medium" | "high" | "critical";
+  status: "unread" | "read" | "acknowledged" | "resolved" | "dismissed";
+  link?: {
+    type: "device" | "asset" | "analysis" | "dashboard";
+    id: string;
+    title: string;
+  };
+  notificationSent: boolean;
+  notificationChannels?: string[]; // Email, SMS, dashboard, etc.
+  expiresAt?: string;
+  createdAt: string;
+  readBy?: string;
+  readAt?: string;
+  acknowledgedBy?: string;
+  acknowledgedAt?: string;
+  resolvedBy?: string;
+  resolvedAt?: string;
+}
+
+/**
+ * Represents an analysis job that runs on enriched data
+ */
+export interface AnalysisJob {
+  id: string;
+  projectId: string;  // Scoped to project without workspaceId
+  type: "scheduled" | "ad-hoc" | "system";
+  analysisType: "clustering" | "pattern_detection" | "anomaly_detection" | 
+                "relationship_analysis" | "forecasting" | "segmentation";
+  status: "queued" | "running" | "completed" | "failed" | "cancelled";
+  progress?: number;  // 0-100 percentage
+  configuration: {
+    dataSelectors: Array<{
+      entityType?: string;
+      filters?: Record<string, any>;
+      timeRange?: {
+        start: string;
+        end?: string;
+      };
+    }>;
+    parameters: Record<string, any>;  // Analysis-specific parameters
+  };
+  schedule?: {
+    frequency: "once" | "hourly" | "daily" | "weekly" | "monthly";
+    nextRun?: string;
+    lastRun?: string;
+  };
+  results?: {
+    outputIds: string[];  // IDs of ProcessedData created by this job
+    summary?: string;
+    metrics?: Record<string, number>;
+  };
+  createdAt: string;
+  createdBy: string;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+}
