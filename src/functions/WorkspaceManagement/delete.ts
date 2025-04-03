@@ -18,8 +18,9 @@ const DeleteWorkspaceHandler: HttpHandler = secureEndpoint(
     permissions: "workspace:*:*:delete:allow",
     requireResource: "workspace"
   },
-  async (request: HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
+  async (req: Request | HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
     try {
+      const request = req as HttpRequest;
       const workspaceId = request.params.id;
       
       if (!workspaceId) {
@@ -54,10 +55,10 @@ const DeleteWorkspaceHandler: HttpHandler = secureEndpoint(
 
 // Register the HTTP trigger
 export default {
-  Name: "UpdateWorkspace",
+  Name: "DeleteWorkspace",
   Route: "v1/workspaces/{id}",
-  Handler: UpdateWorkspaceHandler,
-  Methods: ["PATCH"] as HttpMethod[],
-  Input: {} as { id: string } & Partial<Workspace>,
-  Output: {} as Workspace,
+  Handler: DeleteWorkspaceHandler,
+  Methods: ["DELETE"] as HttpMethod[],
+  Input: {} as { id: string },
+  Output: void 0 as void,
 };

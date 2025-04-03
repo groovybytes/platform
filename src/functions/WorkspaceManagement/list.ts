@@ -14,7 +14,7 @@ import { readItem } from '~/utils/cosmos';
  */
 const ListWorkspacesHandler: HttpHandler = secureEndpoint(
   "system:*:workspaces:list:allow",
-  async (request: HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
+  async (request: Request | HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
     try {
       // Get user ID from request context
       const { request: { userId } } = context?.requestContext ?? await getRequestContext(request);
@@ -59,6 +59,6 @@ export default {
   Route: "v1/workspaces",
   Handler: ListWorkspacesHandler,
   Methods: ["GET"] as HttpMethod[],
-  Input: void 0,
+  Input: void 0 as void,
   Output: [] as Workspace[],
 };

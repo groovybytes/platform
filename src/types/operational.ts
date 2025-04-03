@@ -3,9 +3,9 @@
  */
 export interface User {
   id: string;
-  entraId: string;
+  entraId?: string;
   name: string;
-  status: "active" | "inactive" | "suspended";
+  status: "active" | "inactive" | "suspended" | "pending" | "deleted";
   preferences: {
     language: string;
     timezone: string;
@@ -92,13 +92,17 @@ export interface Membership {
   resourceType: "workspace" | "project";
   resourceId: string;
   membershipType: "member" | "guest";
-  status: "active" | "inactive" | "pending" | "canceled" | "suspended";
-  guest_sponsor_id?: string; // Only applicable for guests
+  status: "active" | "inactive" | "pending" | "revoked" | "suspended" | "expired";
   expiresAt?: string; // Optional expiration, typically for guests
-  invitedAt: string;
-  invitedBy: string;
   joinedAt?: string;
   lastActiveAt?: string;
+  invitedAt: string;
+  invitedBy: string;
+  inviteToken?: string;        // Unique token for invitation links
+  inviteEmail?: string;        // Email address invitation was sent to
+  inviteReminders?: number;    // Count of reminder emails sent
+  lastReminderAt?: string;     // When the last reminder was sent
+  inviteExpiresAt?: string;    // When the invitation expires (if applicable)
 }
 
 /**
@@ -236,7 +240,7 @@ export interface Project {
   name: string;
   slug: string;
   description?: string;
-  status: "active" | "archived" | "draft";
+  status: "active" | "archived" | "inactive";
   settings: ProjectSettings;
   // Project permissions are now handled via the roles and permissions containers
   createdAt: string;

@@ -1,4 +1,4 @@
-import type { AssignedRole, Membership, RoleDefinition, RoleException, User } from '~/types/operational.ts';
+import type { AssignedRole, Membership, RoleDefinition, RoleException } from '~/types/operational.ts';
 import type { PatchOperation } from '@azure/cosmos';
 
 import { isPermissionAllowed } from './permissions';
@@ -6,8 +6,7 @@ import { nanoid } from 'nanoid';
 import { 
   queryItems, 
   readItem, 
-  createItem, 
-  replaceItem, 
+  createItem,  
   patchItem, 
   deleteItem 
 } from './cosmos';

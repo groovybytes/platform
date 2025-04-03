@@ -1,3 +1,4 @@
+// @filename: workspace-management/get.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { Workspace } from '~/types/operational';
 
@@ -14,8 +15,9 @@ const GetWorkspaceHandler: HttpHandler = secureEndpoint(
     permissions: "workspace:*:*:read:allow",
     requireResource: "workspace"
   },
-  async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+  async (req: Request | HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
+      const request = req as HttpRequest;
       const workspaceId = request.params.id || request.query.get('id');
       
       if (!workspaceId) {

@@ -28,7 +28,7 @@ export interface ProtectEndpointOptions {
 }
 
 /**
- * Access control configuration for an endpoint
+ * Access control configuration for an endpoint with enhanced resource type support
  */
 export interface AccessControl {
   /**
@@ -56,8 +56,35 @@ export interface AccessControl {
   /**
    * Required resource context for validation
    * - If specified, ensures the user has a valid membership to this resource type
+   * - Use 'any' when at least one of the resource types must be available
    */
-  requireResource?: 'workspace' | 'project' | 'both';
+  requireResource?: 'workspace' | 'project' | 'both' | 'either' | ResourceRequirement;
+}
+
+/**
+ * Detailed resource requirement configuration
+ */
+export interface ResourceRequirement {
+  /**
+   * Resource types that are required
+   */
+  types: Array<'workspace' | 'project'>;
+  
+  /**
+   * How to validate multiple resource requirements
+   * - 'all': All specified resource types must be available (default)
+   * - 'any': At least one of the specified resource types must be available
+   */
+  mode?: 'all' | 'any';
+  
+  /**
+   * Custom error messages for specific resource types
+   */
+  errorMessages?: {
+    workspace?: string;
+    project?: string;
+    default?: string;
+  };
 }
 
 export interface EnhacedLogContext extends Record<string, any> {
@@ -66,6 +93,122 @@ export interface EnhacedLogContext extends Record<string, any> {
   requestMethod: string;
   functionName: string;
   requestContext?: RequestContext;
+}
+
+/**
+ * Validates resource context based on enhanced resource requirements
+ * 
+ * @returns HttpResponseInit if validation fails, null if successful
+ */
+export function validateResourceContext(
+  requestContext: RequestContext,
+  requireResource: 'workspace' | 'project' | 'both' | 'either' | ResourceRequirement,
+  enhancedLogContext: InvocationContext & EnhacedLogContext
+): HttpResponseInit | null {
+  const context = (enhancedLogContext as InvocationContext) ?? console;
+  const functionName = enhancedLogContext.functionName || 'unknown-function';
+
+  // Simple string-based resource requirements (backward compatibility)
+  if (typeof requireResource === 'string') {
+    if (requireResource === 'workspace' || requireResource === 'both') {
+      if (!requestContext.workspace) {
+        // Log resource context failure
+        context?.info?.(
+          `Missing required workspace context for ${functionName}`,
+          enhancedLogContext
+        );
+        
+        return forbidden('This operation requires a valid workspace context');
+      }
+    }
+    
+    if (requireResource === 'project' || requireResource === 'both') {
+      if (!requestContext.project) {
+        // Log resource context failure
+        context?.info?.(
+          `Missing required project context for ${functionName}`,
+          enhancedLogContext
+        );
+        
+        return forbidden('This operation requires a valid project context');
+      }
+    }
+    
+    if (requireResource === 'either') {
+      if (!requestContext.workspace && !requestContext.project) {
+        // Log resource context failure
+        context?.info?.(
+          `Missing any resource context for ${functionName}`,
+          enhancedLogContext
+        );
+        
+        return forbidden('This operation requires either a workspace or project context');
+      }
+    }
+    
+    return null; // Validation passed
+  }
+  
+  // Enhanced resource requirement object
+  const { types, mode = 'all', errorMessages = {} } = requireResource;
+  
+  // Validate based on the specified mode
+  if (mode === 'all') {
+    // All specified resource types must be available
+    for (const type of types) {
+      if (type === 'workspace' && !requestContext.workspace) {
+        const errorMessage = errorMessages.workspace || 
+                             errorMessages.default || 
+                             'This operation requires a valid workspace context';
+        
+        context?.info?.(
+          `Missing required workspace context for ${functionName}`,
+          enhancedLogContext
+        );
+        
+        return forbidden(errorMessage);
+      }
+      
+      if (type === 'project' && !requestContext.project) {
+        const errorMessage = errorMessages.project || 
+                             errorMessages.default || 
+                             'This operation requires a valid project context';
+        
+        context?.info?.(
+          `Missing required project context for ${functionName}`,
+          enhancedLogContext
+        );
+        
+        return forbidden(errorMessage);
+      }
+    }
+    
+    return null; // All validations passed
+  } else if (mode === 'any') {
+    // At least one of the specified resource types must be available
+    const hasRequiredResource = types.some(type => {
+      return (type === 'workspace' && requestContext.workspace) || 
+             (type === 'project' && requestContext.project);
+    });
+    
+    if (!hasRequiredResource) {
+      const resourceNames = types.map(t => `'${t}'`).join(' or ');
+      const errorMessage = errorMessages.default || 
+                          `This operation requires at least one of these contexts: ${resourceNames}`;
+      
+      context?.info?.(
+        `Missing any required resource context (${types.join(', ')}) for ${functionName}`,
+        enhancedLogContext
+      );
+      
+      return forbidden(errorMessage);
+    }
+    
+    return null; // Validation passed
+  }
+  
+  // Unknown mode, should never happen with TypeScript checks
+  return forbidden('Invalid resource validation configuration');
 }
 
 /**
@@ -247,36 +390,20 @@ export function protectEndpoint<T>(
       };
 
       try {
-        // First, get the request context including the user and resource information
+        // First, get the request context including the user and resource information        
         const requestContext = await getRequestContext(req);
-        Object.assign(enhancedLogContext, {
-          requestContext,
-        });
+        Object.assign(enhancedLogContext, { requestContext });
         
         // Validate resource membership if required
         if (requireResource) {
-          if (requireResource === 'workspace' || requireResource === 'both') {
-            if (!requestContext.workspace) {
-              // Log resource context failure
-              logger?.info?.(
-                `Missing required workspace context for ${functionName}`,
-                enhancedLogContext
-              );
-              
-              return forbidden('This operation requires a valid workspace context');
-            }
-          }
+          const resourceValidationResult = validateResourceContext(
+            requestContext,
+            requireResource,
+            enhancedLogContext as InvocationContext & EnhacedLogContext
+          );
           
-          if (requireResource === 'project' || requireResource === 'both') {
-            if (!requestContext.project) {
-              // Log resource context failure
-              logger?.info?.(
-                `Missing required project context for ${functionName}`,
-                enhancedLogContext
-              );
-              
-              return forbidden('This operation requires a valid project context');
-            }
+          if (resourceValidationResult) {
+            return resourceValidationResult; // Return forbidden response
           }
         }
         
@@ -474,7 +601,6 @@ export function createRequestPermissionChecker(req: Request | HttpRequest) {
   };
 }
 
-
 /**
  * Simplified protectEndpoint wrapper that automatically checks permissions from the request token
  * 
@@ -550,31 +676,122 @@ export function createPermissionMiddleware(req: Request | HttpRequest) {
 }
 
 /**
- * Validates a user has a valid active membership to a resource
+ * Validates a user has a valid active membership to specified resources
  * 
  * @param req - The HTTP request
- * @param resourceType - The type of resource to validate membership for
- * @returns Boolean indicating if the user has a valid membership
+ * @param resourceType - The type(s) of resource to validate membership for
+ * @param options - Additional validation options
+ * @returns Boolean indicating if the user has valid membership(s)
  */
 export async function validateResourceMembership(
   req: Request | HttpRequest,
-  resourceType: 'workspace' | 'project' | 'both'
+  resourceType: 'workspace' | 'project' | 'both' | 'either' | string[],
+  options: {
+    mode?: 'all' | 'any';
+    requireActiveMembership?: boolean;
+  } = {}
 ): Promise<boolean> {
+  const { mode = 'all', requireActiveMembership = true } = options;
   const requestContext = await getRequestContext(req);
   
-  if (resourceType === 'workspace' || resourceType === 'both') {
-    if (!requestContext.workspace) {
-      return false;
+  // Handle string-based resource type specifications (backward compatibility)
+  if (typeof resourceType === 'string') {
+    if (resourceType === 'workspace' || resourceType === 'both') {
+      if (!requestContext.workspace) {
+        return false;
+      }
+      
+      if (requireActiveMembership && 
+          requestContext.workspace.membershipType !== 'member' && 
+          requestContext.workspace.membershipType !== 'guest') {
+        return false;
+      }
     }
+    
+    if (resourceType === 'project' || resourceType === 'both') {
+      if (!requestContext.project) {
+        return false;
+      }
+      
+      if (requireActiveMembership && 
+          requestContext.project.membershipType !== 'member' && 
+          requestContext.project.membershipType !== 'guest') {
+        return false;
+      }
+    }
+    
+    if (resourceType === 'either') {
+      return (
+        (!!requestContext.workspace && 
+         (!requireActiveMembership || 
+          requestContext.workspace.membershipType === 'member' || 
+          requestContext.workspace.membershipType === 'guest')) ||
+        (!!requestContext.project && 
+         (!requireActiveMembership || 
+          requestContext.project.membershipType === 'member' || 
+          requestContext.project.membershipType === 'guest'))
+      );
+    }
+    
+    // For 'both', both conditions need to be satisfied, already checked above
+    return resourceType !== 'both' || (!!requestContext.workspace && !!requestContext.project);
   }
   
-  if (resourceType === 'project' || resourceType === 'both') {
-    if (!requestContext.project) {
-      return false;
+  // Handle array-based resource type specifications
+  const resourceTypes = Array.isArray(resourceType) ? resourceType : [resourceType];
+  
+  // Validate based on specified mode
+  if (mode === 'all') {
+    // All specified resource types must be available
+    for (const type of resourceTypes) {
+      if (type === 'workspace') {
+        if (!requestContext.workspace) {
+          return false;
+        }
+        
+        if (requireActiveMembership && 
+            requestContext.workspace.membershipType !== 'member' && 
+            requestContext.workspace.membershipType !== 'guest') {
+          return false;
+        }
+      } else if (type === 'project') {
+        if (!requestContext.project) {
+          return false;
+        }
+        
+        if (requireActiveMembership && 
+            requestContext.project.membershipType !== 'member' && 
+            requestContext.project.membershipType !== 'guest') {
+          return false;
+        }
+      }
     }
+    
+    return true; // All validations passed
+  } else if (mode === 'any') {
+    // At least one of the specified resource types must be available
+    return resourceTypes.some(type => {
+      if (type === 'workspace') {
+        return (
+          !!requestContext.workspace && 
+          (!requireActiveMembership || 
+           requestContext.workspace.membershipType === 'member' || 
+           requestContext.workspace.membershipType === 'guest')
+        );
+      } else if (type === 'project') {
+        return (
+          !!requestContext.project && 
+          (!requireActiveMembership || 
+           requestContext.project.membershipType === 'member' || 
+           requestContext.project.membershipType === 'guest')
+        );
+      }
+      return false;
+    });
   }
   
-  return true;
+  // Default fallback (should not reach here with TypeScript)
+  return false;
 }
 
 /**

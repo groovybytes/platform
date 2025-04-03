@@ -18,8 +18,9 @@ const UpdateWorkspaceHandler: HttpHandler = secureEndpoint(
     permissions: "workspace:*:settings:update:allow",
     requireResource: "workspace"
   },
-  async (request: HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
+  async (req: Request | HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
     try {
+      const request = req as HttpRequest;
       const workspaceId = request.params.id;
       
       if (!workspaceId) {

@@ -1,64 +1,13 @@
-import type { HttpHandler, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+// @filename: workspace-management/index.ts
 import type { EndpointDefinition } from '~/types/endpoint';
-import type { Workspace } from '~/types/operational';
-
-import { queryItems, readItem, patchItem, deleteItem } from '~/utils/cosmos';
-import { badRequest, conflict, notFound, handleApiError } from '~/utils/error';
-import { secureEndpoint } from '~/utils/protect';
 
 import { app } from '@azure/functions';
 
+import DeleteWorkspace from './delete';
 import CreateWorkspace from './create';
 import UpdateWorkspace from './update';
 import ListWorkspace from './list';
 import GetWorkspace from './get';
-
-
-
-
-
-/**
- * HTTP Trigger to delete a workspace
- * DELETE /api/v1/workspaces/{id}
- */
-const DeleteWorkspaceHandler: HttpHandler = secureEndpoint(
-  {
-    permissions: "workspace:*:*:delete:allow",
-    requireResource: "workspace"
-  },
-  async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-    try {
-      const workspaceId = request.params.id;
-      
-      if (!workspaceId) {
-        return badRequest('Workspace ID is required');
-      }
-
-      // Get the existing workspace
-      const existingWorkspace = await readItem<Workspace>('workspaces', workspaceId);
-      
-      if (!existingWorkspace) {
-        return notFound('Workspace', workspaceId);
-      }
-
-      // Delete the workspace
-      await deleteItem('workspaces', workspaceId);
-
-      // TODO: In a real implementation, we would:
-      // 1. Delete or archive all associated memberships
-      // 2. Delete or archive all associated roles
-      // 3. Delete or archive all associated projects
-      // 4. Trigger any cleanup workflows
-
-      return {
-        status: 204
-      };
-    } catch (error) {
-      context.error('Error deleting workspace:', error);
-      return handleApiError(error);
-    }
-  }
-);
 
 // Create the Endpoints object
 export const Endpoints: Record<string, EndpointDefinition> = {
@@ -87,10 +36,10 @@ export const Endpoints: Record<string, EndpointDefinition> = {
     handler: UpdateWorkspace.Handler,
   },
   DeleteWorkspace: {
-    name: "DeleteWorkspace",
-    route: "v1/workspaces/{id}",
-    methods: ["DELETE"],
-    handler: DeleteWorkspaceHandler
+    name: DeleteWorkspace.Name,
+    route: DeleteWorkspace.Route,
+    methods: DeleteWorkspace.Methods,
+    handler: DeleteWorkspace.Handler,
   }
 };
 
@@ -114,11 +63,11 @@ export type GetWorkspaceOutput = typeof GetWorkspace.Output;
 export type ListWorkspacesInput = typeof ListWorkspace.Input;
 export type ListWorkspacesOutput = typeof ListWorkspace.Output;
 
-export type UpdateWorkspaceInput = { id: string } & Partial<Workspace>;
-export type UpdateWorkspaceOutput = Workspace;
+export type UpdateWorkspaceInput = typeof UpdateWorkspace.Input;
+export type UpdateWorkspaceOutput = typeof UpdateWorkspace.Output;
 
-export type DeleteWorkspaceInput = { id: string };
-export type DeleteWorkspaceOutput = void;
+export type DeleteWorkspaceInput = typeof DeleteWorkspace.Input;
+export type DeleteWorkspaceOutput = typeof DeleteWorkspace.Output;
 
 // Default export
 export default Endpoints;
