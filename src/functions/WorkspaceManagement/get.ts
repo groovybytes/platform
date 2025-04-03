@@ -1,19 +1,9 @@
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import type { EnhacedLogContext } from '~/utils/protect';
 import type { Workspace } from '~/types/operational';
 
-import { queryItems, createItem, patchItem, readItem } from '~/utils/cosmos';
-import { badRequest, conflict, handleApiError, notFound } from '~/utils/error';
-
-import { assignRolesToUser, createMembership } from '~/utils/membership';
-import { getRequestContext } from '~/utils/context';
-
-import { getDefaultWorkspaceSettings } from './_utils';
-import { BASE_URL } from '~/utils/config';
-
+import { badRequest, handleApiError, notFound } from '~/utils/error';
 import { secureEndpoint } from '~/utils/protect';
-import { sluggify } from '~/utils/utils';
-import { nanoid } from 'nanoid';
+import { readItem } from '~/utils/cosmos';
 
 /**
  * HTTP Trigger to get a workspace by ID

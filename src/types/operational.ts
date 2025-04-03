@@ -112,6 +112,7 @@ export interface RoleDefinition {
   permissions: string[]; // "[resource_type]:[resource_id]:[scope]:[action]:[effect]"
   resourceType: "workspace" | "project" | "system";
   resourceId: string; // ID of specific resource or "*" for template roles
+  status: "active" | "inactive" | "disabled" | "archived";
   is_system_role: boolean;
   created_by: string;
   created_at: string;
