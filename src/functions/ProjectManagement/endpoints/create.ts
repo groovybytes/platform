@@ -8,7 +8,6 @@ import { badRequest, conflict, handleApiError } from '~/utils/error';
 import { assignRolesToUser, createMembership } from '~/utils/membership';
 import { getRequestContext } from '~/utils/context';
 
-import { getDefaultWorkspaceSettings } from '../_utils';
 import { BASE_URL } from '~/utils/config';
 
 import { secureEndpoint } from '~/utils/protect';
@@ -17,105 +16,78 @@ import { nanoid } from 'nanoid';
 import { created } from '~/utils/response';
 
 /**
- * HTTP Trigger to create a new workspace
- * POST /api/v1/workspaces
+ * HTTP Trigger to create a new project in a workspace
+ * POST /api/v1/workspaces/{workspaceId}/projects
  */
-const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
-  "system:*:workspaces:create:allow",
+const CreateProjectHandler: HttpHandler = secureEndpoint(
+  {
+    permissions: "workspace:*:projects:create:allow",
+    requireResource: "workspace"
+  },
   async (request: Request | HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
     try {
       // Get user ID from request context
-      const { request: { userId } } = context?.requestContext ?? await getRequestContext(request);
+      const { request: { userId }, workspace } = context?.requestContext ?? await getRequestContext(request);
+      
+      // Ensure we have a workspace context
+      if (!workspace) {
+        return badRequest('Workspace context is required');
+      }
+      
+      const workspaceId = workspace.id;
+      
+      // Get the existing workspace
+      const existingWorkspace = await readItem<Workspace>('workspaces', workspaceId, workspaceId);
+      
+      if (!existingWorkspace) {
+        return notFound('Workspace', workspaceId);
+      }
 
       // Parse and validate request body
-      const body = await request.json() as Workspace;
-      const { name, type = 'standard' } = body;
+      const body = await request.json() as Project;
+      const { name, description } = body;
 
       if (!name) {
-        return badRequest('Workspace name is required');
+        return badRequest('Project name is required');
       }
 
       // Generate slug from name
       const slug = sluggify(name);
 
-      // Check if slug is already taken
-      const existingWorkspaces = await queryItems<Workspace>(
-        'workspaces',
-        'SELECT * FROM c WHERE c.slug = @slug',
-        [{ name: '@slug', value: slug }]
+      // Check if slug is already taken in this workspace
+      const existingProjects = await queryItems<Project>(
+        'projects',
+        'SELECT * FROM c WHERE c.workspaceId = @workspaceId AND c.slug = @slug',
+        [
+          { name: '@workspaceId', value: workspaceId },
+          { name: '@slug', value: slug }
+        ]
       );
 
-      if (existingWorkspaces.length > 0) {
-        return conflict('Workspace with this name already exists');
+      if (existingProjects.length > 0) {
+        return conflict('Project with this name already exists in this workspace');
       }
 
-      const timestamp = new Date().toISOString();
-      const workspaceId = nanoid();
-
-      // Create workspace with current user as owner
-      const workspace: Workspace = {
-        id: workspaceId,
+      // Create project with default settings and owner role assignment
+      const { project: createdProject } = await createProjectWithDefaults(
         name,
         slug,
-        type,
-        status: 'active',
-        settings: getDefaultWorkspaceSettings(),
-        subscriptionId: null, // Will be set during billing setup
-        projects: [],
-        createdAt: timestamp,
-        createdBy: userId,
-        modifiedAt: timestamp,
-        modifiedBy: userId
-      };
-
-      // Create the workspace in Cosmos DB
-      const createdWorkspace = await createItem<Workspace>('workspaces', workspace);
-
-      // Create membership for the current user
-      await createMembership({
-        userId,
-        resourceType: "workspace",
-        resourceId: workspaceId,
-        membershipType: "member",
-        status: "active",
-      }, userId);
-
-      // Assign owner role to current user
-      await assignRolesToUser(
-        userId,
-        "workspace",
         workspaceId,
-        ["owner"],
         userId,
-        false
+        description
       );
 
-      // If this is part of onboarding, trigger the workspace created event
-      const url = new URL(request.url);
-      const instanceId = url.searchParams.get('onboardingInstance');
-      if (instanceId) {
-        // Call the workflow endpoint to signal workspace creation
-        const eventRequest = await fetch(`${BASE_URL}/api/onboarding/workspace-created`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            instanceId,
-            userId,
-            workspaceId
-          })
-        });
+      // Update the workspace to include this project
+      await patchItem<Workspace>(
+        'workspaces',
+        workspaceId,
+        [{ op: 'add', path: '/projects/-', value: createdProject.id }],
+        workspaceId
+      );
 
-        if (!eventRequest.ok) {
-          context.warn('Failed to signal workspace creation to onboarding process:', await eventRequest.text());
-          // Continue anyway as the workspace is created successfully
-        }
-      }
-
-      return created(createdWorkspace);
+      return created(createdProject);
     } catch (error) {
-      context.error('Error creating workspace:', error);
+      context.error('Error creating project:', error);
       return handleApiError(error);
     }
   }
@@ -123,10 +95,10 @@ const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
 
 // Register the HTTP trigger
 export default {
-  Name: "CreateWorkspace",
-  Route: 'v1/workspaces',
-  Handler: CreateWorkspaceHandler,
+  Name: "CreateProject",
+  Route: 'v1/workspaces/{workspaceId}/projects',
+  Handler: CreateProjectHandler,
   Methods: ['POST'] as HttpMethod[],
-  Input: {} as Workspace,
-  Output: {} as Workspace,
+  Input: {} as Project,
+  Output: {} as Project,
 };

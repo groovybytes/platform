@@ -1,4 +1,5 @@
-import { permissionDenied, PermissionDeniedError } from "./error";
+import { permissionDenied, PermissionDeniedError } from "../error";
+import { PERMISSION_HIERARCHY, type PermissionHierarchy } from "./hierarchy";
 
 
 /**
@@ -174,53 +175,6 @@ export const isPermissionAllowed = (
 };
 
 /**
- * Permission hierarchy definition
- * Maps permission patterns to implied permissions
- */
-export interface PermissionHierarchy {
-  [key: string]: string[];
-}
-
-/**
- * Default permission hierarchy for the new permission format
- */
-export const defaultPermissionHierarchy: PermissionHierarchy = {
-  // Resource type level hierarchies
-  'workspace:*:*:admin:allow': [
-    'workspace:*:*:read:allow',
-    'workspace:*:*:write:allow',
-    'workspace:*:*:create:allow',
-    'workspace:*:*:delete:allow'
-  ],
-  
-  'project:*:*:admin:allow': [
-    'project:*:*:read:allow',
-    'project:*:*:write:allow',
-    'project:*:*:create:allow',
-    'project:*:*:delete:allow'
-  ],
-  
-  // Action hierarchies
-  '*:*:*:write:allow': [
-    '*:*:*:create:allow',
-    '*:*:*:update:allow'
-  ],
-  
-  // Scope specific hierarchies
-  '*:*:billing:admin:allow': [
-    '*:*:billing:read:allow',
-    '*:*:billing:write:allow',
-    '*:*:payment:*:allow'
-  ],
-  
-  '*:*:team:admin:allow': [
-    '*:*:team:read:allow',
-    '*:*:team:write:allow',
-    '*:*:member:*:allow'
-  ]
-};
-
-/**
  * Expands permissions using the permission hierarchy
  * 
  * @param permissionList Original list of permissions
@@ -231,7 +185,7 @@ export const defaultPermissionHierarchy: PermissionHierarchy = {
  */
 export function expandPermissions(
   permissionList: string[],
-  hierarchy: PermissionHierarchy = defaultPermissionHierarchy
+  hierarchy: PermissionHierarchy = PERMISSION_HIERARCHY
 ): string[] {
   const expanded = new Set<string>(permissionList);
   let changed = true;

@@ -1,13 +1,11 @@
 // @filename: utils/iothub.ts
 import type { Device } from '~/types/operational';
-
 import { createItem } from '~/utils/cosmos/utils';
-import { nanoid } from 'nanoid';
-
 import IotHub from 'azure-iothub';
+import { nanoid } from 'nanoid';
 import process from 'node:process';
 
-// Registry cache
+// IotHub.Registry cache
 let registry: IotHub.Registry | null = null;
 
 /**
@@ -31,11 +29,12 @@ export function getIoTHubRegistry(): IotHub.Registry {
 
 /**
  * Creates a new IoT device in Azure IoT Hub
- * @param deviceId Unique device identifier
  * @returns The device connection string or null if failed
  */
-export async function createIoTHubDevice(deviceId: string): Promise<string | null> {
+export async function createIoTHubDevice(): Promise<{ deviceId: string, connectionString: string } | null> {
   try {
+    // Generate a unique device ID
+    const deviceId = `device-${nanoid(8)}`;
     console.log(`Attempting to create device '${deviceId}' in IoT Hub`);
     
     // Validate IoT Hub hostname exists
@@ -71,7 +70,7 @@ export async function createIoTHubDevice(deviceId: string): Promise<string | nul
       const primaryKey = deviceInfo.responseBody.authentication.symmetricKey.primaryKey;
       const connectionString = `HostName=${hostName};DeviceId=${deviceId};SharedAccessKey=${primaryKey}`;
       console.log(`Device '${deviceId}' created successfully with connection string`);
-      return connectionString;
+      return { deviceId, connectionString };
     } else {
       console.error(`Could not get authentication information for device '${deviceId}'`, deviceInfo);
       return null;
@@ -107,6 +106,39 @@ export async function deleteIoTHubDevice(deviceId: string): Promise<boolean> {
 }
 
 /**
+ * Updates a device status in Azure IoT Hub
+ * @param deviceId The device ID to update
+ * @param status The new status ('enabled' or 'disabled')
+ * @returns True if successful, false otherwise
+ */
+export async function updateIoTHubDeviceStatus(deviceId: string, status: 'enabled' | 'disabled'): Promise<boolean> {
+  try {
+    console.log(`Updating device '${deviceId}' status to '${status}' in IoT Hub`);
+    const registry = getIoTHubRegistry();
+    
+    // Get current device info
+    const deviceInfo = await registry.get(deviceId);
+    if (!deviceInfo.responseBody) {
+      console.error(`Device '${deviceId}' not found in IoT Hub`);
+      return false;
+    }
+    
+    // Update status
+    deviceInfo.responseBody.status = status;
+    await registry.update(deviceInfo.responseBody);
+    
+    console.log(`Device '${deviceId}' status updated to '${status}' in IoT Hub`);
+    return true;
+  } catch (error) {
+    console.error(`Failed to update IoT Hub device status: ${error instanceof Error ? error.message : error}`);
+    if (error instanceof Error && error.stack) {
+      console.debug(`Stack trace: ${error.stack}`);
+    }
+    return false;
+  }
+}
+
+/**
  * Registers a device in both IoT Hub and the GroovyBytes operational database
  * @param deviceInfo Information for the device to register
  * @param projectId ID of the project to associate the device with
@@ -124,22 +156,23 @@ export async function registerDevice(
   userId: string
 ): Promise<Device | null> {
   try {
-    const deviceId = nanoid();
-    console.log(`Registering device '${deviceId}' for project '${projectId}'`);
+    console.log(`Registering new device for project '${projectId}'`);
     
     // Create device in IoT Hub
-    const connectionString = await createIoTHubDevice(deviceId);
-    if (!connectionString) {
-      console.error(`Failed to create device '${deviceId}' in IoT Hub`);
+    const deviceResult = await createIoTHubDevice();
+    if (!deviceResult) {
+      console.error(`Failed to create device in IoT Hub`);
       return null;
     }
+    
+    const { deviceId, connectionString } = deviceResult;
     
     // Create timestamp for audit fields
     const timestamp = new Date().toISOString();
     
     // Create device record in operational database
     const deviceRecord: Device = {
-      id: deviceId,
+      id: nanoid(),
       projectId,
       deviceName: deviceInfo.deviceName,
       sensorType: deviceInfo.sensorType,
@@ -155,8 +188,6 @@ export async function registerDevice(
     };
     
     console.log(`Creating device record in operational database for '${deviceId}'`);
-    
-    // Create item in Cosmos DB
     const createdDevice = await createItem<Device>('devices', deviceRecord);
     console.log(`Device '${deviceId}' successfully registered`);
     

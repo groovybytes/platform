@@ -1,9 +1,9 @@
 // @filename: protect.ts
 import type { HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import type { PermissionOptions } from "./permissions";
+import type { PermissionOptions } from "./permissions/permissions";
 import type { RequestContext } from "./context";
 
-import { checkPermission, isPermissionAllowed } from "./permissions";
+import { checkPermission, isPermissionAllowed } from "./permissions/permissions";
 import { getRequestContext } from "./context";
 import {
   forbidden,

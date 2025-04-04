@@ -11,13 +11,14 @@ import { badRequest, conflict, handleApiError } from '~/utils/error';
 import { assignRolesToUser, createMembership } from '~/utils/membership';
 import { getRequestContext } from '~/utils/context';
 
-import { getDefaultWorkspaceSettings } from '../_utils';
+import { createWorkspaceWithDefaults, getDefaultWorkspaceSettings } from '../_settings';
 import { BASE_URL } from '~/utils/config';
 
 import { secureEndpoint } from '~/utils/protect';
 import { sluggify } from '~/utils/utils';
 import { nanoid } from 'nanoid';
 import { created } from '~/utils/response';
+
 
 /**
  * HTTP Trigger to create a new workspace
@@ -52,46 +53,22 @@ const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
         return conflict('Workspace with this name already exists');
       }
 
-      const timestamp = new Date().toISOString();
-      const workspaceId = nanoid();
+      // Create workspace with default settings and owner role assignment
+      const { workspace: createdWorkspace } = await createWorkspaceWithDefaults(
+        name, 
+        slug, 
+        userId, 
+        type
+      );
 
-      // Create workspace with current user as owner
-      const workspace: Workspace = {
-        id: workspaceId,
-        name,
-        slug,
-        type,
-        status: 'active',
-        settings: getDefaultWorkspaceSettings(),
-        subscriptionId: null, // Will be set during billing setup
-        projects: [],
-        createdAt: timestamp,
-        createdBy: userId,
-        modifiedAt: timestamp,
-        modifiedBy: userId
-      };
-
-      // Create the workspace in Cosmos DB
-      const createdWorkspace = await createItem<Workspace>('workspaces', workspace);
-
-      // Create membership for the current user
+      // Create membership for the current user (this is separate from role assignment)
       await createMembership({
         userId,
         resourceType: "workspace",
-        resourceId: workspaceId,
+        resourceId: createdWorkspace.id,
         membershipType: "member",
-        status: "active",
+        status: "active"
       }, userId);
-
-      // Assign owner role to current user
-      await assignRolesToUser(
-        userId,
-        "workspace",
-        workspaceId,
-        ["owner"],
-        userId,
-        false
-      );
 
       // If this is part of onboarding, trigger the workspace created event
       const url = new URL(request.url);
@@ -106,7 +83,7 @@ const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
           body: JSON.stringify({
             instanceId,
             userId,
-            workspaceId
+            workspaceId: createdWorkspace.id
           })
         });
 

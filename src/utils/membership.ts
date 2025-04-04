@@ -1,7 +1,7 @@
 import type { AssignedRole, Membership, RoleDefinition, RoleException } from '~/types/operational.ts';
 import type { PatchOperation } from '@azure/cosmos';
 
-import { isPermissionAllowed } from './permissions';
+import { isPermissionAllowed } from './permissions/permissions';
 import { nanoid } from 'nanoid';
 import { 
   queryItems, 
