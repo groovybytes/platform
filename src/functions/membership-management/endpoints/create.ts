@@ -3,6 +3,9 @@ import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, Invocation
 import type { Membership, Project, User, Workspace } from '~/types/operational';
 import type { EnhacedLogContext } from '~/utils/protect';
 
+import * as df from 'durable-functions';
+import OnboardingOrchestrator from '~/functions/onboarding-orchestration/orchestrator/onboarding';
+
 import { badRequest, handleApiError, conflict } from '~/utils/error';
 import { createItem, queryItems, readItem } from '~/utils/cosmos/utils';
 import { assignRolesToUser } from '~/utils/membership';
@@ -11,7 +14,7 @@ import { sendInvitationEmail } from '~/email/email';
 import { generateRandomHex } from '~/utils/utils';
 import { secureEndpoint } from '~/utils/protect';
 
-import { BASE_URL } from '~/utils/config';
+import { BACKEND_BASE_URL, FRONTEND_BASE_URL } from '~/utils/config';
 import { nanoid } from 'nanoid';
 
 import AcceptInvitation from './invitation/accept';
@@ -164,7 +167,7 @@ const CreateMembershipHandler: HttpHandler = secureEndpoint(
       
       if (isInvitation && inviteToken) {
         // Generate invite link
-        inviteLink = `${BASE_URL}/${AcceptInvitation.Route}?token=${inviteToken}`;
+        inviteLink = `${FRONTEND_BASE_URL}/invitation/accept?token=${inviteToken}`;
         
         // Get resource name
         let resourceName = resourceId;
@@ -183,13 +186,29 @@ const CreateMembershipHandler: HttpHandler = secureEndpoint(
         // Send invitation email
         await sendInvitationEmail(email, resourceName, inviteLink);
       }
+
+      // After creating membership in CreateMembershipHandler
+      const client = df.getClient(context);
+      await client.startNew(OnboardingOrchestrator.Name, {
+        instanceId: inviteToken,
+        input: {
+          type: "invite",
+          userId: user.id,
+          email: email,
+          name: user.name,
+          resourceId: resourceId,
+          resourceType: resourceType,
+          membershipType: membershipType,
+          membershipId: createdMembership.id
+        } as typeof OnboardingOrchestrator.Input
+      });
       
       // Return successful response with membership, user, and invite link
       return created({
         membership: createdMembership,
         user,
         isNewUser,
-        ...(inviteLink && { inviteLink })
+        ...(inviteLink && { inviteLink }),
       } as CreateMembershipOutput);
     } catch (error) {
       context.error('Error creating membership:', error);

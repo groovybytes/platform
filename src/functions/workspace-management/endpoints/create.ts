@@ -1,24 +1,26 @@
 // @filename: workspace-management/endpoints/create.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import type { SupportedEventMap } from '~/functions/onboarding-orchestration/endpoints/event/_schema';
 import type { EnhacedLogContext } from '~/utils/protect';
 import type { Workspace } from '~/types/operational';
 
 import OnboardingEventNotification from '~/functions/onboarding-orchestration/endpoints/event/event';
+import OnboardingOrchestrator from '~/functions/onboarding-orchestration/orchestrator/onboarding';
+import * as df from 'durable-functions';
 
-import { queryItems, createItem, patchItem } from '~/utils/cosmos/utils';
+import { queryItems } from '~/utils/cosmos/utils';
 import { badRequest, conflict, handleApiError } from '~/utils/error';
 
-import { assignRolesToUser, createMembership } from '~/utils/membership';
+import { createMembership } from '~/utils/membership';
 import { getRequestContext } from '~/utils/context';
 
-import { createWorkspaceWithDefaults, getDefaultWorkspaceSettings } from '../_settings';
-import { BASE_URL } from '~/utils/config';
+import { createWorkspaceWithDefaults } from '../_settings';
 
+import { getUserById } from '~/utils/cosmos/helpers';
 import { secureEndpoint } from '~/utils/protect';
-import { sluggify } from '~/utils/utils';
-import { nanoid } from 'nanoid';
-import { created } from '~/utils/response';
 
+import { sluggify } from '~/utils/utils';
+import { created } from '~/utils/response';
 
 /**
  * HTTP Trigger to create a new workspace
@@ -30,6 +32,10 @@ const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
     try {
       // Get user ID from request context
       const { request: { userId } } = context?.requestContext ?? await getRequestContext(request);
+      const user = await getUserById(userId);
+      if (!user) {
+        return badRequest('User not found');
+      }
 
       // Parse and validate request body
       const body = await request.json() as Workspace;
@@ -72,25 +78,30 @@ const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
 
       // If this is part of onboarding, trigger the workspace created event
       const url = new URL(request.url);
-      const instanceId = url.searchParams.get('onboardingInstance');
-      if (instanceId) {
-        // Call the workflow endpoint to signal workspace creation
-        const eventRequest = await fetch(`${BASE_URL}/api/${OnboardingEventNotification.Route}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            instanceId,
-            userId,
-            workspaceId: createdWorkspace.id
-          })
-        });
+      let instanceId = url.searchParams.get('onboardingInstance') || undefined;
 
-        if (!eventRequest.ok) {
-          context.warn('Failed to signal workspace creation to onboarding process:', await eventRequest.text());
-          // Continue anyway as the workspace is created successfully
-        }
+      const client = df.getClient(context);
+      if (!instanceId) {
+        instanceId = await client.startNew(OnboardingOrchestrator.Name, {
+          instanceId,
+          input: {
+            type: 'new_workspace',
+            userId,
+            email: user.emails.primary,
+            name: user.name,
+            resourceId: createdWorkspace.id,
+            resourceType: 'workspace'
+          } as typeof OnboardingOrchestrator.Input
+        });
+      }
+
+      if (instanceId) {
+        // Signal resource.created event to any waiting orchestrators
+        await client.raiseEvent(instanceId, OnboardingEventNotification.Name, {
+          eventType: 'resource.created',
+          resourceId: createdWorkspace.id,
+          resourceType: 'workspace'
+        } as SupportedEventMap['resource.created']);
       }
 
       return created(createdWorkspace);

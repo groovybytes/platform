@@ -1,4 +1,4 @@
-// @filename: onboarding-orchestration/membership/create.ts
+// @filename: onboarding-orchestration/endpoints/event/event.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { SupportedEventMap, NotificationRequest } from './_schema';
 import type { EnhacedLogContext } from '~/utils/protect';

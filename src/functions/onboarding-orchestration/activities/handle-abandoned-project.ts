@@ -5,7 +5,7 @@ import type { User, Workspace } from '~/types/operational';
 import { readItem, createItem } from '~/utils/cosmos/utils';
 import { sendEmail } from '~/utils/email';
 import { nanoid } from 'nanoid';
-import { BASE_URL } from '~/utils/config';
+import { BACKEND_BASE_URL, FRONTEND_BASE_URL } from '~/utils/config';
 
 /**
  * Handles the case when a user abandons the project creation process
@@ -74,8 +74,7 @@ const HandleAbandonedProjectHandler: ActivityHandler = async (
   await createItem('notes', welcomeNote);
   
   // Send notification email
-  const appBaseUrl = BASE_URL as string;
-  const projectUrl = `${appBaseUrl}/workspaces/${workspaceId}/projects/${defaultProject.id}`;
+  const projectUrl = `${FRONTEND_BASE_URL}/projects/${defaultProject.id}?workspaceId=${workspaceId}`;
   
   await sendEmail({
     to: user.emails.primary,

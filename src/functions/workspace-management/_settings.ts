@@ -1,4 +1,4 @@
-// @filename: utils/workspace-management/defaults.ts
+// @filename: workspace-management/_settings.ts
 import type { Workspace, RoleDefinition, AssignedRole } from '~/types/operational';
 import { WORKSPACE_ROLES } from '~/utils/permissions/model';
 import { createItem } from '~/utils/cosmos/utils';

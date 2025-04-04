@@ -1,4 +1,4 @@
-// @filename: functions/DeviceManagement/endpoints/list.ts
+// @filename: device-management/endpoints/list.ts
 import type { HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { Device } from '~/types/operational';
 

@@ -1,20 +1,21 @@
-// @filename: functions/DeviceManagement/endpoints/get.ts
+// @filename: functions/AssetManagement/endpoints/get.ts
 import type { HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import type { Device } from '~/types/operational';
+import type { Asset } from '~/types/operational';
 
-import { getDeviceById } from '~/utils/cosmos/helpers';
+import { readItem } from '~/utils/cosmos/utils';
 import { badRequest, handleApiError, notFound } from '~/utils/error';
 import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
+import { generateDownloadUrl } from '~/utils/assets';
 import { ok } from '~/utils/response';
 
 /**
- * HTTP Trigger to get a device by ID
- * GET /api/v1/devices/{id}
+ * HTTP Trigger to get an asset by ID
+ * GET /api/v1/assets/{id}
  */
-const GetDeviceHandler = secureEndpoint(
+const GetAssetHandler = secureEndpoint(
   {
-    permissions: "project:*:devices:read:allow",
+    permissions: "project:*:assets:read:allow",
     requireResource: "project"
   },
   async (request: Request | HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
@@ -26,27 +27,35 @@ const GetDeviceHandler = secureEndpoint(
         return badRequest('Project ID is required. Please specify a project context.');
       }
       
-      // Get device ID from route parameters
+      // Get asset ID from route parameters
       const req = request as HttpRequest;
-      const deviceId = req.params.id;
+      const assetId = req.params.id;
       
-      if (!deviceId) {
-        return badRequest('Device ID is required');
+      if (!assetId) {
+        return badRequest('Asset ID is required');
       }
       
-      // Get device from database
-      const device = await getDeviceById(deviceId, project.id);
+      // Get asset from database
+      const asset = await readItem<Asset>('assets', assetId, project.id);
       
-      if (!device) {
-        return notFound('Device', deviceId);
+      if (!asset) {
+        return notFound('Asset', assetId);
       }
       
-      // Remove connection string from response for security
-      const { connectionString: _, ...secureDevice } = device;
+      // Generate download URL if asset is ready
+      let downloadUrl = null;
+      if (asset.status === 'active' && 
+          (asset.processingState === 'processed' || asset.processingState === 'validating')) {
+        downloadUrl = await generateDownloadUrl(project.id, asset.url);
+      }
       
-      return ok(secureDevice);
+      return ok({
+        asset,
+        downloadUrl,
+        ...(downloadUrl && { expiresIn: '60 minutes' })
+      });
     } catch (error) {
-      context.error('Error getting device:', error);
+      context.error('Error getting asset:', error);
       return handleApiError(error);
     }
   }
@@ -54,10 +63,10 @@ const GetDeviceHandler = secureEndpoint(
 
 // Register the HTTP trigger
 export default {
-  Name: 'GetDevice',
-  Route: 'v1/devices/{id}',
-  Handler: GetDeviceHandler,
+  Name: 'GetAsset',
+  Route: 'v1/assets/{id}',
+  Handler: GetAssetHandler,
   Methods: ['GET'] as HttpMethod[],
   Input: {} as { id: string },
-  Output: {} as Device,
+  Output: {} as { asset: Asset, downloadUrl?: string, expiresIn?: string },
 };

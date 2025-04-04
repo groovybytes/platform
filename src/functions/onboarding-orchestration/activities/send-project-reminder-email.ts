@@ -1,7 +1,7 @@
 // @filename: onboarding/activities/send-project-reminder-email.ts
 import type { ActivityHandler } from 'durable-functions';
 import type { User, Workspace } from '~/types/operational';
-import { BASE_URL } from '~/utils/config';
+import { FRONTEND_BASE_URL } from '~/utils/config';
 
 import { readItem } from '~/utils/cosmos/utils';
 import { sendEmail } from '~/utils/email';
@@ -24,8 +24,7 @@ const SendProjectReminderEmailHandler: ActivityHandler = async (
   }
   
   // Build the reminder email content based on the attempt number
-  const appBaseUrl = BASE_URL as string;
-  const newProjectUrl = `${appBaseUrl}/workspaces/${workspaceId}/projects/new`;
+  const newProjectUrl = `${FRONTEND_BASE_URL}/projects/new?workspaceId=${workspaceId}`;
   const remainingAttempts = maxAttempts - attempt;
   
   // Create subject and message based on urgency level

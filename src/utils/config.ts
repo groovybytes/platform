@@ -12,8 +12,9 @@ export const AZURE_ENTRA_TENANT_NAME = process.env.AZURE_ENTRA_TENANT_NAME ?? "a
 export const AUTH_SECRET = process.env.AUTH_SECRET ?? generateRandomHex(64); // openssl rand -base64 32
 export const AUTH_SALT = process.env.AUTH_SALT ?? generateRandomHex(64); // openssl rand -base64 32
 
-export const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
-export const REDIRECT_URI = process.env.REDIRECT_URI ?? `${BASE_URL}/api/auth/redirect`;
+export const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL ?? "http://localhost:3000";
+export const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL ?? "http://localhost:3000";
+export const REDIRECT_URI = process.env.REDIRECT_URI ?? `${BACKEND_BASE_URL}/api/auth/redirect`;
 
 export const SIGN_UP_SIGN_IN_POLICY_NAME = process.env.SIGN_UP_SIGN_IN_POLICY_NAME ?? "B2C_1_Signup_Login";
 export const RESET_PASSWORD_POLICY_NAME = process.env.RESET_PASSWORD_POLICY_NAME ?? "B2C_1_Password_Reset";

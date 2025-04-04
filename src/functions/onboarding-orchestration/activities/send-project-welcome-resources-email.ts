@@ -1,7 +1,7 @@
 // @filename: onboarding/activities/send-project-welcome-resources.ts
 import type { ActivityHandler } from 'durable-functions';
 import type { User, Project } from '~/types/operational';
-import { BASE_URL } from '~/utils/config';
+import { FRONTEND_BASE_URL } from '~/utils/config';
 
 import { readItem } from '~/utils/cosmos/utils';
 import { sendEmail } from '~/utils/email';
@@ -30,11 +30,10 @@ const SendProjectWelcomeResourcesEmailHandler: ActivityHandler = async (
   }
   
   // Build links specific to this project
-  const appBaseUrl = BASE_URL as string;
-  const projectUrl = `${appBaseUrl}/workspaces/${workspaceId}/projects/${projectId}`;
-  const documentsUrl = `${projectUrl}/documents`;
-  const tasksUrl = `${projectUrl}/tasks`;
-  const settingsUrl = `${projectUrl}/settings`;
+  const projectUrl = `${FRONTEND_BASE_URL}/projects/${projectId}?workspaceId=${workspaceId}`;
+  const assetsUrl = `${FRONTEND_BASE_URL}/assets?workspaceId=${workspaceId}&projectId=${projectId}`;
+  const jobsUrl = `${FRONTEND_BASE_URL}/jobs?workspaceId=${workspaceId}&projectId=${projectId}`;
+  const settingsUrl = `${FRONTEND_BASE_URL}/settings?workspaceId=${workspaceId}&projectId=${projectId}`;
   
   // Send welcome resources email
   await sendEmail({
@@ -49,17 +48,17 @@ const SendProjectWelcomeResourcesEmailHandler: ActivityHandler = async (
         <h3>Project Quick Links</h3>
         <ul>
           <li><a href="${projectUrl}/dashboard">Project Dashboard</a> - Your project overview</li>
-          <li><a href="${documentsUrl}">Documents</a> - Create and manage project documents</li>
-          <li><a href="${tasksUrl}">Tasks</a> - Track and manage project tasks</li>
+          <li><a href="${assetsUrl}">Documents</a> - Create and manage project documents</li>
+          <li><a href="${jobsUrl}">Jobs</a> - Track and manage project jobs</li>
           <li><a href="${projectUrl}/team">Team</a> - See who's on your project team</li>
           <li><a href="${settingsUrl}">Settings</a> - Configure your project settings</li>
         </ul>
         
         <h3>Project Resources</h3>
         <ul>
-          <li><a href="${appBaseUrl}/help/projects/getting-started">Project Getting Started Guide</a></li>
-          <li><a href="${appBaseUrl}/help/projects/best-practices">Project Best Practices</a></li>
-          <li><a href="${appBaseUrl}/help/projects/tutorials">Project Tutorials</a></li>
+          <li><a href="${FRONTEND_BASE_URL}/help/projects/getting-started">Project Getting Started Guide</a></li>
+          <li><a href="${FRONTEND_BASE_URL}/help/projects/best-practices">Project Best Practices</a></li>
+          <li><a href="${FRONTEND_BASE_URL}/help/projects/tutorials">Project Tutorials</a></li>
         </ul>
         
         <p>We've added some sample content to help you get familiar with the platform. Feel free to explore!</p>
@@ -75,15 +74,15 @@ const SendProjectWelcomeResourcesEmailHandler: ActivityHandler = async (
         
         PROJECT QUICK LINKS
         - Project Dashboard: ${projectUrl}/dashboard
-        - Documents: ${documentsUrl}
-        - Tasks: ${tasksUrl}
+        - Documents: ${assetsUrl}
+        - Jobs: ${jobsUrl}
         - Team: ${projectUrl}/team
         - Settings: ${settingsUrl}
         
         PROJECT RESOURCES
-        - Project Getting Started Guide: ${appBaseUrl}/help/projects/getting-started
-        - Project Best Practices: ${appBaseUrl}/help/projects/best-practices
-        - Project Tutorials: ${appBaseUrl}/help/projects/tutorials
+        - Project Getting Started Guide: ${FRONTEND_BASE_URL}/help/projects/getting-started
+        - Project Best Practices: ${FRONTEND_BASE_URL}/help/projects/best-practices
+        - Project Tutorials: ${FRONTEND_BASE_URL}/help/projects/tutorials
         
         We've added some sample content to help you get familiar with the platform. Feel free to explore!
         

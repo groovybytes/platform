@@ -1,6 +1,7 @@
+// @filename: project-management/endpoints/update.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { EnhacedLogContext } from '~/utils/protect';
-import type { Workspace } from '~/types/operational';
+import type { Project } from '~/types/operational';
 import type { PatchOperation } from '@azure/cosmos';
 
 import { badRequest, conflict, handleApiError, notFound } from '~/utils/error';
@@ -11,64 +12,66 @@ import { sluggify } from '~/utils/utils';
 import { ok } from '~/utils/response';
 
 /**
- * HTTP Trigger to update a workspace
- * PATCH /api/v1/workspaces/{id}
+ * HTTP Trigger to update a project
+ * PATCH /api/v1/projects/{id}
  */
-const UpdateWorkspaceHandler: HttpHandler = secureEndpoint(
+const UpdateProjectHandler: HttpHandler = secureEndpoint(
   {
-    permissions: "workspace:*:settings:update:allow",
-    requireResource: "workspace"
+    permissions: "project:*:settings:update:allow",
+    requireResource: "project"
   },
   async (req: Request | HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
     try {
       const request = req as HttpRequest;
-      const workspaceId = request.params.id;
+      const { project: contextProject, request: { userId } } = context?.requestContext ?? await getRequestContext(request);
       
-      if (!workspaceId) {
-        return badRequest('Workspace ID is required');
+      // Verify project context is available
+      if (!contextProject) {
+        return badRequest('Project context is required');
       }
-
-      // Get user ID from request context
-      const { request: { userId } } = await getRequestContext(request);
       
-      // Get the existing workspace
-      const existingWorkspace = await readItem<Workspace>('workspaces', workspaceId);
+      const projectId = contextProject.id;
+      const workspaceId = contextProject.workspaceId;
       
-      if (!existingWorkspace) {
-        return notFound('Workspace', workspaceId);
+      // Get the existing project
+      const existingProject = await readItem<Project>('projects', projectId, workspaceId);
+      
+      if (!existingProject) {
+        return notFound('Project', projectId);
       }
 
       // Parse the update payload
-      const updates = await request.json() as Partial<Workspace>;
+      const updates = await request.json() as Partial<Project>;
       
       // Validate updates
-      const allowedUpdates: (keyof Workspace)[] = ['name', 'settings', 'status'];
-      const invalidKeys = Object.keys(updates).filter(key => !allowedUpdates.includes(key as keyof Workspace));
+      const allowedUpdates: (keyof Project)[] = ['name', 'settings', 'status', 'description'];
+      const invalidKeys = Object.keys(updates).filter(key => 
+        !allowedUpdates.includes(key as keyof Project)
+      );
       
       if (invalidKeys.length > 0) {
         return badRequest(`Invalid update fields: ${invalidKeys.join(', ')}`);
       }
 
       // If name is being updated, check if the new slug would conflict
-      if (updates.name && updates.name !== existingWorkspace.name) {
-        const newSlug = sluggify(updates.name);
+      let newSlug: string | undefined;
+      if (updates.name && updates.name !== existingProject.name) {
+        newSlug = sluggify(updates.name);
         
-        // Check for slug conflicts
-        const conflictingWorkspaces = await queryItems<Workspace>(
-          'workspaces',
-          'SELECT * FROM c WHERE c.slug = @slug AND c.id != @id',
+        // Check for slug conflicts within the same workspace
+        const conflictingProjects = await queryItems<Project>(
+          'projects',
+          'SELECT * FROM c WHERE c.workspaceId = @workspaceId AND c.slug = @slug AND c.id != @id',
           [
+            { name: '@workspaceId', value: workspaceId },
             { name: '@slug', value: newSlug },
-            { name: '@id', value: workspaceId }
+            { name: '@id', value: projectId }
           ]
         );
         
-        if (conflictingWorkspaces.length > 0) {
-          return conflict('Workspace with this name already exists');
+        if (conflictingProjects.length > 0) {
+          return conflict('Project with this name already exists in this workspace');
         }
-        
-        // Update the slug
-        updates.slug = newSlug;
       }
 
       // Prepare the update operations
@@ -76,11 +79,17 @@ const UpdateWorkspaceHandler: HttpHandler = secureEndpoint(
       
       if (updates.name) {
         operations.push({ op: 'replace', path: '/name', value: updates.name });
-        operations.push({ op: 'replace', path: '/slug', value: updates.slug });
+        if (newSlug) {
+          operations.push({ op: 'replace', path: '/slug', value: newSlug });
+        }
       }
       
       if (updates.status) {
         operations.push({ op: 'replace', path: '/status', value: updates.status });
+      }
+      
+      if (updates.description !== undefined) {
+        operations.push({ op: 'replace', path: '/description', value: updates.description });
       }
       
       if (updates.settings) {
@@ -97,15 +106,16 @@ const UpdateWorkspaceHandler: HttpHandler = secureEndpoint(
       operations.push({ op: 'replace', path: '/modifiedBy', value: userId });
       
       // Apply the updates
-      const updatedWorkspace = await patchItem<Workspace>(
-        'workspaces',
-        workspaceId,
-        operations
+      const updatedProject = await patchItem<Project>(
+        'projects',
+        projectId,
+        operations,
+        workspaceId
       );
 
-      return ok(updatedWorkspace);
+      return ok(updatedProject);
     } catch (error) {
-      context.error('Error updating workspace:', error);
+      context.error('Error updating project:', error);
       return handleApiError(error);
     }
   }
@@ -113,10 +123,10 @@ const UpdateWorkspaceHandler: HttpHandler = secureEndpoint(
 
 // Register the HTTP trigger
 export default {
-  Name: "UpdateWorkspace",
-  Route: "v1/workspaces/{id}",
-  Handler: UpdateWorkspaceHandler,
+  Name: "UpdateProject",
+  Route: "v1/projects/{id}",
+  Handler: UpdateProjectHandler,
   Methods: ["PATCH"] as HttpMethod[],
-  Input: {} as { id: string } & Partial<Workspace>,
-  Output: {} as Workspace,
+  Input: {} as { id: string } & Partial<Project>,
+  Output: {} as Project,
 };

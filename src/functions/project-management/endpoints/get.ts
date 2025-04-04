@@ -1,40 +1,45 @@
-// @filename: workspace-management/get.ts
+// @filename: project-management/endpoints/get.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import type { Workspace } from '~/types/operational';
+import type { EnhacedLogContext } from '~/utils/protect';
+import type { Project } from '~/types/operational';
 
 import { badRequest, handleApiError, notFound } from '~/utils/error';
-import { secureEndpoint } from '~/utils/protect';
 import { readItem } from '~/utils/cosmos/utils';
+import { getRequestContext } from '~/utils/context';
+import { secureEndpoint } from '~/utils/protect';
 import { ok } from '~/utils/response';
 
 /**
- * HTTP Trigger to get a workspace by ID
- * GET /api/v1/workspaces/{id}
+ * HTTP Trigger to get a project by ID
+ * GET /api/v1/projects/{id}
  */
-const GetWorkspaceHandler: HttpHandler = secureEndpoint(
+const GetProjectHandler: HttpHandler = secureEndpoint(
   {
-    permissions: "workspace:*:*:read:allow",
-    requireResource: "workspace"
+    permissions: "project:*:*:read:allow",
+    requireResource: "project"
   },
-  async (req: Request | HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+  async (req: Request | HttpRequest, context: InvocationContext & EnhacedLogContext): Promise<HttpResponseInit> => {
     try {
       const request = req as HttpRequest;
-      const workspaceId = request.params.id || request.query.get('id');
+      const { project: contextProject } = context?.requestContext ?? await getRequestContext(request);
       
-      if (!workspaceId) {
-        return badRequest('Workspace ID is required');
+      // Verify project context is available
+      if (!contextProject) {
+        return badRequest('Project context is required');
       }
-
-      // Get workspace from Cosmos DB
-      const workspace = await readItem<Workspace>('workspaces', workspaceId);
       
-      if (!workspace) {
-        return notFound('Workspace', workspaceId);
+      const projectId = contextProject.id;
+      
+      // Get the project from database
+      const project = await readItem<Project>('projects', projectId, contextProject.workspaceId);
+      
+      if (!project) {
+        return notFound('Project', projectId);
       }
-
-      return ok(workspace);
+      
+      return ok(project);
     } catch (error) {
-      context.error('Error getting workspace:', error);
+      context.error('Error getting project:', error);
       return handleApiError(error);
     }
   }
@@ -42,10 +47,10 @@ const GetWorkspaceHandler: HttpHandler = secureEndpoint(
 
 // Register the HTTP trigger
 export default {
-  Name: "GetWorkspace",
-  Route: "v1/workspaces/{id}",
-  Handler: GetWorkspaceHandler,
+  Name: "GetProject",
+  Route: "v1/projects/{id}",
+  Handler: GetProjectHandler,
   Methods: ["GET"] as HttpMethod[],
   Input: {} as { id: string },
-  Output: {} as Workspace,
+  Output: {} as Project,
 };

@@ -11,7 +11,7 @@ import { sendInvitationEmail } from '~/email/email';
 import { generateRandomHex } from '~/utils/utils';
 import { secureEndpoint } from '~/utils/protect';
 
-import { BASE_URL } from '~/utils/config';
+import { BACKEND_BASE_URL, FRONTEND_BASE_URL } from '~/utils/config';
 import { nanoid } from 'nanoid';
 
 import AcceptInvitation from './invitation/accept';
@@ -164,7 +164,7 @@ const CreateMembershipHandler: HttpHandler = secureEndpoint(
       
       if (isInvitation && inviteToken) {
         // Generate invite link
-        inviteLink = `${BASE_URL}/${AcceptInvitation.Route}?token=${inviteToken}`;
+        inviteLink = `${FRONTEND_BASE_URL}/invitation/accept?token=${inviteToken}`;
         
         // Get resource name
         let resourceName = resourceId;

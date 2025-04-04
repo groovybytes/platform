@@ -1,10 +1,10 @@
-// @filename: functions/AssetManagement/index.ts
+// @filename: asset-management/index.ts
 import type { EndpointDefinition } from '~/types/definitions';
 
 import { app } from '@azure/functions';
 
-import InitiateUpload from './endpoints/initiate-upload';
-import CompleteUpload from './endpoints/complete-upload';
+import InitiateUpload from './endpoints/upload/start';
+import CompleteUpload from './endpoints/upload/complete';
 import GetAsset from './endpoints/get';
 import ListAssets from './endpoints/list';
 import UpdateAsset from './endpoints/update';

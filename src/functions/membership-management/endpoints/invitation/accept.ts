@@ -1,8 +1,10 @@
 // @filename: user-management/membership/accept-invitation.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import type { SupportedEventMap } from '~/functions/onboarding-orchestration/endpoints/event/_schema';
 import type { Membership, User, Workspace, Project } from '~/types/operational';
 import type { EnhacedLogContext } from '~/utils/protect';
 
+import OnboardingEventNotification from '~/functions/onboarding-orchestration/endpoints/event/event';
 import OnboardingOrchestrator from '~/functions/onboarding-orchestration/orchestrator/onboarding';
 
 import { badRequest, handleApiError, notFound, unauthorized } from '~/utils/error';
@@ -102,10 +104,12 @@ const AcceptInvitationHandler: HttpHandler = secureEndpoint(
 
       // Use the durable client: prefer context.df if available (when bound), otherwise fallback to df.getClient(context)
       const client = df.getClient(context);
+      let instanceId = invitation.inviteToken;
 
       // Start the onboarding orchestrator for new users
       if (isNewUser) {
-        await client.startNew(OnboardingOrchestrator.Name, {
+        instanceId = await client.startNew(OnboardingOrchestrator.Name, {
+          instanceId,
           input: {
             type: 'invite',
             userId,
@@ -119,16 +123,13 @@ const AcceptInvitationHandler: HttpHandler = secureEndpoint(
 
       // Raise an event for the invitation orchestrator if waiting
       try {
-        await client.raiseEvent(
-          `invite-${invitation.id}`,
-          'InvitationAccepted',
-          {
-            userId,
-            membershipId: invitation.id,
-            resourceType: invitation.resourceType,
-            resourceId: invitation.resourceId
-          }
-        );
+        await client.raiseEvent(instanceId!, OnboardingEventNotification.Name, {
+          eventType: 'invitation.accepted',
+          userId,
+          membershipId: invitation.id,
+          resourceType: invitation.resourceType,
+          resourceId: invitation.resourceId
+        } as SupportedEventMap['invitation.accepted']);
       } catch (error) {
         context.log('No waiting orchestration found for invitation acceptance event', error);
       }

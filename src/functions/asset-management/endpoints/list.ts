@@ -1,20 +1,20 @@
-// @filename: functions/DeviceManagement/endpoints/list.ts
+// @filename: asset-management/endpoints/list.ts
 import type { HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import type { Device } from '~/types/operational';
+import type { Asset } from '~/types/operational';
 
-import { getDevicesByProject } from '~/utils/cosmos/helpers';
+import { getAssetsByProject } from '~/utils/cosmos/helpers';
 import { badRequest, handleApiError } from '~/utils/error';
 import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
 import { ok } from '~/utils/response';
 
 /**
- * HTTP Trigger to list all devices for a project
- * GET /api/v1/devices
+ * HTTP Trigger to list all assets for a project
+ * GET /api/v1/assets
  */
-const ListDevicesHandler = secureEndpoint(
+const ListAssetsHandler = secureEndpoint(
   {
-    permissions: "project:*:devices:read:allow",
+    permissions: "project:*:assets:read:allow",
     requireResource: "project"
   },
   async (request: Request | HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
@@ -26,21 +26,15 @@ const ListDevicesHandler = secureEndpoint(
         return badRequest('Project ID is required. Please specify a project context.');
       }
       
-      // Get devices from database
-      const devices = await getDevicesByProject(project.id);
-      
-      // Remove connection strings from response for security
-      const secureDevices = devices.map(device => {
-        const { connectionString: _, ...secureDevice } = device;
-        return secureDevice;
-      });
+      // Get assets from database
+      const assets = await getAssetsByProject(project.id);
       
       return ok({
-        count: secureDevices.length,
-        devices: secureDevices
+        count: assets.length,
+        assets: assets
       });
     } catch (error) {
-      context.error('Error listing devices:', error);
+      context.error('Error listing assets:', error);
       return handleApiError(error);
     }
   }
@@ -48,10 +42,10 @@ const ListDevicesHandler = secureEndpoint(
 
 // Register the HTTP trigger
 export default {
-  Name: 'ListDevices',
-  Route: 'v1/devices',
-  Handler: ListDevicesHandler,
+  Name: 'ListAssets',
+  Route: 'v1/assets',
+  Handler: ListAssetsHandler,
   Methods: ['GET'] as HttpMethod[],
   Input: {} as Record<string, never>,
-  Output: {} as { count: number, devices: Device[] },
+  Output: {} as { count: number, assets: Asset[] },
 };

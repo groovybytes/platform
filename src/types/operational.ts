@@ -257,7 +257,6 @@ export interface ApiKey {
   modifiedBy: string;
 }
 
-
 /**
  * Represents a project within a workspace
  */

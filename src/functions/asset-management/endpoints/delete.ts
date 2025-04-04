@@ -1,23 +1,21 @@
-// @filename: functions/DeviceManagement/endpoints/delete.ts
+// @filename: functions/AssetManagement/endpoints/delete.ts
 import type { HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import type { Device } from '~/types/operational';
+import type { Asset } from '~/types/operational';
 
-import { badRequest, handleApiError, notFound } from '~/utils/error';
 import { deleteItem, readItem } from '~/utils/cosmos/utils';
-
+import { badRequest, handleApiError, notFound } from '~/utils/error';
 import { getRequestContext } from '~/utils/context';
 import { secureEndpoint } from '~/utils/protect';
-
-import { deleteIoTHubDevice } from '~/utils/iothub';
+import { deleteAssetBlob } from '~/utils/assets';
 import { noContent } from '~/utils/response';
 
 /**
- * HTTP Trigger to delete a device
- * DELETE /api/v1/devices/{id}
+ * HTTP Trigger to delete an asset
+ * DELETE /api/v1/assets/{id}
  */
-const DeleteDeviceHandler = secureEndpoint(
+const DeleteAssetHandler = secureEndpoint(
   {
-    permissions: "project:*:devices:delete:allow",
+    permissions: "project:*:assets:delete:allow",
     requireResource: "project"
   },
   async (request: Request | HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
@@ -29,34 +27,34 @@ const DeleteDeviceHandler = secureEndpoint(
         return badRequest('Project ID is required. Please specify a project context.');
       }
       
-      // Get device ID from route parameters
+      // Get asset ID from route parameters
       const req = request as HttpRequest;
-      const deviceId = req.params.id;
+      const assetId = req.params.id;
       
-      if (!deviceId) {
-        return badRequest('Device ID is required');
+      if (!assetId) {
+        return badRequest('Asset ID is required');
       }
       
-      // Get device to check if it exists and to get IoT Hub device ID
-      const device = await readItem<Device>('devices', deviceId, project.id);
+      // Get asset to check if it exists and to get blob name
+      const asset = await readItem<Asset>('assets', assetId, project.id);
       
-      if (!device) {
-        return notFound('Device', deviceId);
+      if (!asset) {
+        return notFound('Asset', assetId);
       }
       
-      // Delete from IoT Hub
-      const iotHubDeleted = await deleteIoTHubDevice(device.id);
+      // Delete blob from storage
+      const blobDeleted = await deleteAssetBlob(project.id, asset.url);
       
-      if (!iotHubDeleted) {
-        context.warn(`Failed to delete device from IoT Hub, but continuing with database deletion`);
+      if (!blobDeleted) {
+        context.warn(`Failed to delete asset blob, but continuing with database deletion`);
       }
       
       // Delete from database
-      await deleteItem('devices', deviceId, project.id);
+      await deleteItem('assets', assetId, project.id);
       
       return noContent();
     } catch (error) {
-      context.error('Error deleting device:', error);
+      context.error('Error deleting asset:', error);
       return handleApiError(error);
     }
   }
@@ -64,9 +62,9 @@ const DeleteDeviceHandler = secureEndpoint(
 
 // Register the HTTP trigger
 export default {
-  Name: 'DeleteDevice',
-  Route: 'v1/devices/{id}',
-  Handler: DeleteDeviceHandler,
+  Name: 'DeleteAsset',
+  Route: 'v1/assets/{id}',
+  Handler: DeleteAssetHandler,
   Methods: ['DELETE'] as HttpMethod[],
   Input: {} as { id: string },
   Output: void 0 as void,

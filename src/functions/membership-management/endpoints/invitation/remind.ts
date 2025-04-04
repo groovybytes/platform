@@ -1,7 +1,9 @@
 // @filename: user-management/membership/send-reminder.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { EnhacedLogContext } from '~/utils/protect';
-import type { Membership, User, Workspace, Project } from '~/types/operational';
+import type { Membership, Workspace, Project } from '~/types/operational';
+
+import AcceptInvitation from './accept';
 
 import { badRequest, handleApiError, notFound, conflict } from '~/utils/error';
 import { secureEndpoint } from '~/utils/protect';
@@ -10,7 +12,7 @@ import { readItem, patchItem } from '~/utils/cosmos/utils';
 import { sendInvitationEmail } from '~/email/email';
 import { ok } from '~/utils/response';
 
-import { BASE_URL } from '~/utils/config';
+import { FRONTEND_BASE_URL } from '~/utils/config';
 
 /**
  * HTTP Trigger to send a reminder for a pending invitation
@@ -76,8 +78,7 @@ const SendReminderHandler: HttpHandler = secureEndpoint(
       }
       
       // Generate invite link
-      const appBaseUrl = BASE_URL as string;
-      const inviteLink = `${appBaseUrl}/accept-invitation?token=${membership.inviteToken}`;
+      const inviteLink = `${FRONTEND_BASE_URL}/invitation/accept?token=${membership.inviteToken}`;
       
       // Update reminder count and time
       const now = new Date().toISOString();

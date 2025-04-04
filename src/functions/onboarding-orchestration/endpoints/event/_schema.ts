@@ -1,4 +1,4 @@
-// @filename: functions/OnboardingOrchestration/endpoints/event/_schema.ts
+// @filename: onboarding-orchestration/endpoints/event/_schema.ts
 import { z } from 'zod';
 
 // Create a reusable non-empty string validator

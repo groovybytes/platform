@@ -7,7 +7,7 @@ import {
     getWorkspaceReminderEmailContent,
     getOnboardingAbandonedEmailContent
   } from './templates';
-import { BASE_URL } from '~/utils/config';
+import { FRONTEND_BASE_URL } from '~/utils/config';
 
   /**
    * Send a welcome email to a newly onboarded user
@@ -15,8 +15,7 @@ import { BASE_URL } from '~/utils/config';
    * @param name User's name
    */
   export async function sendWelcomeEmail(email: string, name: string): Promise<void> {
-    const appBaseUrl = BASE_URL as string;
-    const content = getWelcomeEmailContent(name, appBaseUrl);
+    const content = getWelcomeEmailContent(name, FRONTEND_BASE_URL);
   
     await sendEmail({
       to: email,
@@ -60,8 +59,7 @@ import { BASE_URL } from '~/utils/config';
     attempt: number,
     maxAttempts: number
   ): Promise<void> {
-    const appBaseUrl = BASE_URL as string;
-    const content = getWorkspaceReminderEmailContent(name, appBaseUrl, attempt, maxAttempts);
+    const content = getWorkspaceReminderEmailContent(name, FRONTEND_BASE_URL, attempt, maxAttempts);
   
     await sendEmail({
       to: email,

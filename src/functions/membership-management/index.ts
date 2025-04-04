@@ -9,7 +9,6 @@ import AcceptInvitation from './endpoints/invitation/accept';
 import SendReminder from './endpoints/invitation/remind';
 import CleanupFunction from './cron/cleanup';
 
-
 import DeleteMembership from './endpoints/delete';
 import ListMemberships from './endpoints/list';
 import GetMembership from './endpoints/get';

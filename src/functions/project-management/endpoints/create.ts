@@ -1,8 +1,13 @@
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import type { EnhacedLogContext } from '~/utils/protect';
+import type { SupportedEventMap } from '~/functions/onboarding-orchestration/endpoints/event/_schema';
 import type { Project, Workspace } from '~/types/operational';
+import type { EnhacedLogContext } from '~/utils/protect';
 
-import { queryItems, createItem, patchItem, readItem } from '~/utils/cosmos/utils';
+import OnboardingEventNotification from '~/functions/onboarding-orchestration/endpoints/event/event';
+import OnboardingOrchestrator from '~/functions/onboarding-orchestration/orchestrator/onboarding';
+import * as df from 'durable-functions';
+
+import { queryItems, patchItem, readItem } from '~/utils/cosmos/utils';
 import { badRequest, conflict, handleApiError, notFound } from '~/utils/error';
 
 import { getRequestContext } from '~/utils/context';
@@ -11,10 +16,13 @@ import { sluggify } from '~/utils/utils';
 import { created } from '~/utils/response';
 
 import { createProjectWithDefaults } from '../_settings';
+import { BACKEND_BASE_URL } from '~/utils/config';
+import { createMembership } from '~/utils/membership';
+import { getUserById } from '~/utils/cosmos/helpers';
 
 /**
  * HTTP Trigger to create a new project in a workspace
- * POST /api/v1/workspaces/{workspaceId}/projects
+ * POST /api/v1/projects
  */
 const CreateProjectHandler: HttpHandler = secureEndpoint(
   {
@@ -25,6 +33,10 @@ const CreateProjectHandler: HttpHandler = secureEndpoint(
     try {
       // Get user ID from request context
       const { request: { userId }, workspace } = context?.requestContext ?? await getRequestContext(request);
+      const user = await getUserById(userId);
+      if (!user) {
+        return badRequest('User not found');
+      }
       
       // Ensure we have a workspace context
       if (!workspace) {
@@ -73,6 +85,44 @@ const CreateProjectHandler: HttpHandler = secureEndpoint(
         userId,
         description
       );
+      
+      // Create membership for the current user (this is separate from role assignment)
+      await createMembership({
+        userId,
+        resourceType: "project",
+        resourceId: createdProject.id,
+        membershipType: "member",
+        status: "active"
+      }, userId);
+      
+      // If this is part of onboarding, trigger the workspace created event
+      const url = new URL(request.url);
+      let instanceId = url.searchParams.get('onboardingInstance') || undefined;
+
+      const client = df.getClient(context);
+      if (!instanceId) {
+        instanceId = await client.startNew(OnboardingOrchestrator.Name, {
+          instanceId,
+          input: {
+            type: 'new_project',
+            userId,
+            email: user.emails.primary,
+            name: user.name,
+            resourceId: createdProject.id,
+            resourceType: 'project',
+            workspaceId // For projects
+          } as typeof OnboardingOrchestrator.Input
+        });
+      }
+
+      if (instanceId) {
+        // Signal resource.created event to any waiting orchestrators
+        await client.raiseEvent(instanceId, OnboardingEventNotification.Name, {
+          eventType: 'resource.created',
+          resourceId: createdProject.id,
+          resourceType: 'project'
+        } as SupportedEventMap['resource.created']);
+      }
 
       // Update the workspace to include this project
       await patchItem<Workspace>(
@@ -93,7 +143,7 @@ const CreateProjectHandler: HttpHandler = secureEndpoint(
 // Register the HTTP trigger
 export default {
   Name: "CreateProject",
-  Route: 'v1/workspaces/{workspaceId}/projects',
+  Route: 'v1/projects',
   Handler: CreateProjectHandler,
   Methods: ['POST'] as HttpMethod[],
   Input: {} as Project,

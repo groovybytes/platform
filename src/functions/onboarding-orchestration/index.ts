@@ -1,4 +1,4 @@
-// @filename: onboarding/orchestrators/index.ts
+// @filename: onboarding-orchestration/index.ts
 import type { OrchestratorDefinition, ActivityDefinition, EndpointDefinition } from '~/types/definitions';
 import * as df from 'durable-functions';
 
