@@ -5,6 +5,7 @@ import type { User, Workspace } from '~/types/operational';
 import { readItem, createItem } from '~/utils/cosmos/utils';
 import { sendEmail } from '~/utils/email';
 import { nanoid } from 'nanoid';
+import { BASE_URL } from '~/utils/config';
 
 /**
  * Handles the case when a user abandons the project creation process
@@ -73,7 +74,7 @@ const HandleAbandonedProjectHandler: ActivityHandler = async (
   await createItem('notes', welcomeNote);
   
   // Send notification email
-  const appBaseUrl = process.env.APP_BASE_URL as string;
+  const appBaseUrl = BASE_URL as string;
   const projectUrl = `${appBaseUrl}/workspaces/${workspaceId}/projects/${defaultProject.id}`;
   
   await sendEmail({

@@ -133,7 +133,7 @@ export interface AssignedRole {
   roles: string[]; // List of role IDs
   resourceId: string; // The specific resource this role applies to
   resourceType: "workspace" | "project"; // The type of resource
-  assignment_type: "guest"; // Whether this role assignment is a guest relationship
+  assignment_type?: "guest"; // Whether this role assignment is a guest relationship
   assigned_by: string;
   assigned_at: string;
   expires_at?: string; // Guest access often has an expiration
@@ -297,9 +297,8 @@ export interface ProjectSettings {
  * Device representation in the operational database
  */
 export interface Device {
-  id: string;
-  projectId: string;  // Primary scope - removing workspaceId for easier transfers
-  deviceId: string;   // Unique identifier within IoT Hub
+  id: string; // Unique identifier within IoT Hub
+  projectId: string;  // Primary scope - removing workspaceId for easier transfers 
   deviceName: string;
   sensorType: string;
   location: string;
