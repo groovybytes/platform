@@ -3,7 +3,7 @@ import type { Workspace, Membership, Team, Project, Asset, AnalysisJob, Device, 
 import { createItem, readItem, queryItems, replaceItem, patchItem, createProjectDatabase, deleteItem, deleteProjectDatabase, createProjectItem, queryProjectItems, readProjectItem } from './utils';
 
 // Container names in the operational database
-const CONTAINERS = {
+export const OPERATIONAL_CONTAINERS = {
   USERS: 'users',
   WORKSPACES: 'workspaces',
   TEAMS: 'teams',
@@ -13,11 +13,12 @@ const CONTAINERS = {
   DEVICES: 'devices',
   ASSETS: 'assets',
   NOTIFICATIONS: 'notifications',
-  JOBS: 'jobs'
+  JOBS: 'jobs',
+  QUERIES: 'queries',
 };
 
 // Container names in project-specific databases
-const ANALYTICS_CONTAINERS = {
+export const ANALYTICS_CONTAINERS = {
   RAW: 'raw',
   ENRICHED: 'enriched',
   PROCESSED: 'processed'
@@ -28,16 +29,16 @@ const ANALYTICS_CONTAINERS = {
 // =============================================
 
 export async function createUser(user: User): Promise<User> {
-  return createItem<User>(CONTAINERS.USERS, user);
+  return createItem<User>(OPERATIONAL_CONTAINERS.USERS, user);
 }
 
 export async function getUserById(id: string): Promise<User> {
-  return readItem<User>(CONTAINERS.USERS, id, id);
+  return readItem<User>(OPERATIONAL_CONTAINERS.USERS, id, id);
 }
 
 export async function getUserByEmail(email: string): Promise<User | undefined> {
   const users = await queryItems<User>(
-    CONTAINERS.USERS,
+    OPERATIONAL_CONTAINERS.USERS,
     'SELECT * FROM c WHERE c.emails.primary = @email',
     [{ name: '@email', value: email }]
   );
@@ -45,12 +46,12 @@ export async function getUserByEmail(email: string): Promise<User | undefined> {
 }
 
 export async function updateUser(id: string, user: User): Promise<User> {
-  return replaceItem<User>(CONTAINERS.USERS, id, user, id);
+  return replaceItem<User>(OPERATIONAL_CONTAINERS.USERS, id, user, id);
 }
 
 export async function updateUserStatus(id: string, status: User['status']): Promise<User> {
   return patchItem<User>(
-    CONTAINERS.USERS,
+    OPERATIONAL_CONTAINERS.USERS,
     id,
     [{ op: 'replace', path: '/status', value: status }],
     id
@@ -62,21 +63,21 @@ export async function updateUserStatus(id: string, status: User['status']): Prom
 // =============================================
 
 export async function createWorkspace(workspace: Workspace): Promise<Workspace> {
-  return createItem<Workspace>(CONTAINERS.WORKSPACES, workspace);
+  return createItem<Workspace>(OPERATIONAL_CONTAINERS.WORKSPACES, workspace);
 }
 
 export async function getWorkspaceById(id: string): Promise<Workspace> {
-  return readItem<Workspace>(CONTAINERS.WORKSPACES, id, id);
+  return readItem<Workspace>(OPERATIONAL_CONTAINERS.WORKSPACES, id, id);
 }
 
 export async function updateWorkspace(id: string, workspace: Workspace): Promise<Workspace> {
-  return replaceItem<Workspace>(CONTAINERS.WORKSPACES, id, workspace, id);
+  return replaceItem<Workspace>(OPERATIONAL_CONTAINERS.WORKSPACES, id, workspace, id);
 }
 
 export async function getWorkspacesByUser(userId: string): Promise<Workspace[]> {
   // First, get all workspace memberships for the user
   const memberships = await queryItems<Membership>(
-    CONTAINERS.MEMBERSHIP,
+    OPERATIONAL_CONTAINERS.MEMBERSHIP,
     'SELECT * FROM c WHERE c.userId = @userId AND c.resourceType = @resourceType AND c.status = @status',
     [
       { name: '@userId', value: userId },
@@ -95,7 +96,7 @@ export async function getWorkspacesByUser(userId: string): Promise<Workspace[]> 
 
   // Query all workspaces the user is a member of
   return queryItems<Workspace>(
-    CONTAINERS.WORKSPACES,
+    OPERATIONAL_CONTAINERS.WORKSPACES,
     'SELECT * FROM c WHERE ARRAY_CONTAINS(@workspaceIds, c.id)',
     [{ name: '@workspaceIds', value: workspaceIds }]
   );
@@ -106,23 +107,23 @@ export async function getWorkspacesByUser(userId: string): Promise<Workspace[]> 
 // =============================================
 
 export async function createTeam(team: Team): Promise<Team> {
-  return createItem<Team>(CONTAINERS.TEAMS, team);
+  return createItem<Team>(OPERATIONAL_CONTAINERS.TEAMS, team);
 }
 
 export async function getTeamById(id: string, workspaceId: string): Promise<Team> {
-  return readItem<Team>(CONTAINERS.TEAMS, id, workspaceId);
+  return readItem<Team>(OPERATIONAL_CONTAINERS.TEAMS, id, workspaceId);
 }
 
 export async function getTeamsByWorkspace(workspaceId: string): Promise<Team[]> {
   return queryItems<Team>(
-    CONTAINERS.TEAMS,
+    OPERATIONAL_CONTAINERS.TEAMS,
     'SELECT * FROM c WHERE c.workspaceId = @workspaceId',
     [{ name: '@workspaceId', value: workspaceId }]
   );
 }
 
 export async function updateTeam(id: string, team: Team): Promise<Team> {
-  return replaceItem<Team>(CONTAINERS.TEAMS, id, team, team.workspaceId);
+  return replaceItem<Team>(OPERATIONAL_CONTAINERS.TEAMS, id, team, team.workspaceId);
 }
 
 export async function addTeamMember(teamId: string, workspaceId: string, userId: string): Promise<Team> {
@@ -130,7 +131,7 @@ export async function addTeamMember(teamId: string, workspaceId: string, userId:
 
   if (!team.members.includes(userId)) {
     return patchItem<Team>(
-      CONTAINERS.TEAMS,
+      OPERATIONAL_CONTAINERS.TEAMS,
       teamId,
       [{ op: 'add', path: '/members/-', value: userId }],
       workspaceId
@@ -146,7 +147,7 @@ export async function removeTeamMember(teamId: string, workspaceId: string, user
 
   if (memberIndex >= 0) {
     return patchItem<Team>(
-      CONTAINERS.TEAMS,
+      OPERATIONAL_CONTAINERS.TEAMS,
       teamId,
       [{ op: 'remove', path: `/members/${memberIndex}` }],
       workspaceId
@@ -162,7 +163,7 @@ export async function removeTeamMember(teamId: string, workspaceId: string, user
 
 export async function createProject(project: Project): Promise<Project> {
   // Create the project in the operational database
-  const createdProject = await createItem<Project>(CONTAINERS.PROJECTS, project);
+  const createdProject = await createItem<Project>(OPERATIONAL_CONTAINERS.PROJECTS, project);
 
   // Create the corresponding project database in the analytics account
   await createProjectDatabase(project.id);
@@ -171,24 +172,24 @@ export async function createProject(project: Project): Promise<Project> {
 }
 
 export async function getProjectById(id: string, workspaceId: string): Promise<Project> {
-  return readItem<Project>(CONTAINERS.PROJECTS, id, workspaceId);
+  return readItem<Project>(OPERATIONAL_CONTAINERS.PROJECTS, id, workspaceId);
 }
 
 export async function getProjectsByWorkspace(workspaceId: string): Promise<Project[]> {
   return queryItems<Project>(
-    CONTAINERS.PROJECTS,
+    OPERATIONAL_CONTAINERS.PROJECTS,
     'SELECT * FROM c WHERE c.workspaceId = @workspaceId',
     [{ name: '@workspaceId', value: workspaceId }]
   );
 }
 
 export async function updateProject(id: string, project: Project): Promise<Project> {
-  return replaceItem<Project>(CONTAINERS.PROJECTS, id, project, project.workspaceId);
+  return replaceItem<Project>(OPERATIONAL_CONTAINERS.PROJECTS, id, project, project.workspaceId);
 }
 
 export async function deleteProject(id: string, workspaceId: string): Promise<void> {
   // Delete from operational database
-  await deleteItem(CONTAINERS.PROJECTS, id, workspaceId);
+  await deleteItem(OPERATIONAL_CONTAINERS.PROJECTS, id, workspaceId);
 
   // Delete the project database from analytics account
   await deleteProjectDatabase(id);
@@ -214,10 +215,10 @@ export async function transferProjectToWorkspace(
   };
 
   // Create in the new workspace
-  const newProject = await createItem<Project>(CONTAINERS.PROJECTS, updatedProject);
+  const newProject = await createItem<Project>(OPERATIONAL_CONTAINERS.PROJECTS, updatedProject);
 
   // Delete from the old workspace
-  await deleteItem(CONTAINERS.PROJECTS, projectId, currentWorkspaceId);
+  await deleteItem(OPERATIONAL_CONTAINERS.PROJECTS, projectId, currentWorkspaceId);
 
   // Return the transferred project
   return newProject;
@@ -229,16 +230,16 @@ export async function transferProjectToWorkspace(
 // =============================================
 
 export async function createRoleDefinition(role: RoleDefinition): Promise<RoleDefinition> {
-  return createItem<RoleDefinition>(CONTAINERS.MEMBERSHIP, role);
+  return createItem<RoleDefinition>(OPERATIONAL_CONTAINERS.MEMBERSHIP, role);
 }
 
 export async function getRoleDefinitionById(id: string): Promise<RoleDefinition> {
-  return readItem<RoleDefinition>(CONTAINERS.MEMBERSHIP, id, id);
+  return readItem<RoleDefinition>(OPERATIONAL_CONTAINERS.MEMBERSHIP, id, id);
 }
 
 export async function getRoleDefinitionsByResourceType(resourceType: string): Promise<RoleDefinition[]> {
   return queryItems<RoleDefinition>(
-    CONTAINERS.MEMBERSHIP,
+    OPERATIONAL_CONTAINERS.MEMBERSHIP,
     'SELECT * FROM c WHERE c.type = "role" AND c.resourceType = @resourceType',
     [{ name: '@resourceType', value: resourceType }]
   );
@@ -257,13 +258,13 @@ export async function assignRolesToUser(userId: string, resourceType: "workspace
     assigned_at: new Date().toISOString()
   };
 
-  return createItem<AssignedRole>(CONTAINERS.MEMBERSHIP, assignedRole);
+  return createItem<AssignedRole>(OPERATIONAL_CONTAINERS.MEMBERSHIP, assignedRole);
 }
 
 export async function getUserRolesForResource(userId: string, resourceType: string, resourceId: string): Promise<AssignedRole | null> {
   try {
     return await readItem<AssignedRole>(
-      CONTAINERS.MEMBERSHIP,
+      OPERATIONAL_CONTAINERS.MEMBERSHIP,
       `${userId}-${resourceType}-${resourceId}`,
       `${resourceType}-${resourceId}`
     );
@@ -274,11 +275,11 @@ export async function getUserRolesForResource(userId: string, resourceType: stri
 }
 
 export async function createRoleException(exception: RoleException): Promise<RoleException> {
-  return createItem<RoleException>(CONTAINERS.MEMBERSHIP, exception);
+  return createItem<RoleException>(OPERATIONAL_CONTAINERS.MEMBERSHIP, exception);
 }
 
 export async function createApiKey(apiKey: ApiKey): Promise<ApiKey> {
-  return createItem<ApiKey>(CONTAINERS.MEMBERSHIP, apiKey);
+  return createItem<ApiKey>(OPERATIONAL_CONTAINERS.MEMBERSHIP, apiKey);
 }
 
 // =============================================
@@ -286,23 +287,23 @@ export async function createApiKey(apiKey: ApiKey): Promise<ApiKey> {
 // =============================================
 
 export async function createDevice(device: Device): Promise<Device> {
-  return createItem<Device>(CONTAINERS.DEVICES, device);
+  return createItem<Device>(OPERATIONAL_CONTAINERS.DEVICES, device);
 }
 
 export async function getDeviceById(id: string, projectId: string): Promise<Device> {
-  return readItem<Device>(CONTAINERS.DEVICES, id, projectId);
+  return readItem<Device>(OPERATIONAL_CONTAINERS.DEVICES, id, projectId);
 }
 
 export async function getDevicesByProject(projectId: string): Promise<Device[]> {
   return queryItems<Device>(
-    CONTAINERS.DEVICES,
+    OPERATIONAL_CONTAINERS.DEVICES,
     'SELECT * FROM c WHERE c.projectId = @projectId',
     [{ name: '@projectId', value: projectId }]
   );
 }
 
 export async function updateDevice(id: string, device: Device): Promise<Device> {
-  return replaceItem<Device>(CONTAINERS.DEVICES, id, device, device.projectId);
+  return replaceItem<Device>(OPERATIONAL_CONTAINERS.DEVICES, id, device, device.projectId);
 }
 
 export async function updateDeviceStatus(
@@ -319,11 +320,11 @@ export async function updateDeviceStatus(
     operations.push({ op: 'replace', path: '/processingState', value: processingState });
   }
 
-  return patchItem<Device>(CONTAINERS.DEVICES, id, operations, projectId);
+  return patchItem<Device>(OPERATIONAL_CONTAINERS.DEVICES, id, operations, projectId);
 }
 
 export async function deleteDevice(id: string, projectId: string): Promise<void> {
-  return deleteItem(CONTAINERS.DEVICES, id, projectId);
+  return deleteItem(OPERATIONAL_CONTAINERS.DEVICES, id, projectId);
 }
 
 // =============================================
@@ -331,23 +332,23 @@ export async function deleteDevice(id: string, projectId: string): Promise<void>
 // =============================================
 
 export async function createAsset(asset: Asset): Promise<Asset> {
-  return createItem<Asset>(CONTAINERS.ASSETS, asset);
+  return createItem<Asset>(OPERATIONAL_CONTAINERS.ASSETS, asset);
 }
 
 export async function getAssetById(id: string, projectId: string): Promise<Asset> {
-  return readItem<Asset>(CONTAINERS.ASSETS, id, projectId);
+  return readItem<Asset>(OPERATIONAL_CONTAINERS.ASSETS, id, projectId);
 }
 
 export async function getAssetsByProject(projectId: string): Promise<Asset[]> {
   return queryItems<Asset>(
-    CONTAINERS.ASSETS,
+    OPERATIONAL_CONTAINERS.ASSETS,
     'SELECT * FROM c WHERE c.projectId = @projectId',
     [{ name: '@projectId', value: projectId }]
   );
 }
 
 export async function updateAsset(id: string, asset: Asset): Promise<Asset> {
-  return replaceItem<Asset>(CONTAINERS.ASSETS, id, asset, asset.projectId);
+  return replaceItem<Asset>(OPERATIONAL_CONTAINERS.ASSETS, id, asset, asset.projectId);
 }
 
 export async function updateAssetProcessingState(
@@ -364,11 +365,11 @@ export async function updateAssetProcessingState(
     operations.push({ op: 'replace', path: '/processingProgress', value: processingProgress });
   }
 
-  return patchItem<Asset>(CONTAINERS.ASSETS, id, operations, projectId);
+  return patchItem<Asset>(OPERATIONAL_CONTAINERS.ASSETS, id, operations, projectId);
 }
 
 export async function deleteAsset(id: string, projectId: string): Promise<void> {
-  return deleteItem(CONTAINERS.ASSETS, id, projectId);
+  return deleteItem(OPERATIONAL_CONTAINERS.ASSETS, id, projectId);
 }
 
 // =============================================
@@ -376,11 +377,11 @@ export async function deleteAsset(id: string, projectId: string): Promise<void> 
 // =============================================
 
 export async function createNotification(notification: Notification): Promise<Notification> {
-  return createItem<Notification>(CONTAINERS.NOTIFICATIONS, notification);
+  return createItem<Notification>(OPERATIONAL_CONTAINERS.NOTIFICATIONS, notification);
 }
 
 export async function getNotificationById(id: string, projectId: string): Promise<Notification> {
-  return readItem<Notification>(CONTAINERS.NOTIFICATIONS, id, projectId);
+  return readItem<Notification>(OPERATIONAL_CONTAINERS.NOTIFICATIONS, id, projectId);
 }
 
 export async function getNotificationsByProject(projectId: string, status?: Notification['status']): Promise<Notification[]> {
@@ -394,7 +395,7 @@ export async function getNotificationsByProject(projectId: string, status?: Noti
     parameters.push({ name: '@status', value: status });
   }
 
-  return queryItems<Notification>(CONTAINERS.NOTIFICATIONS, query, parameters);
+  return queryItems<Notification>(OPERATIONAL_CONTAINERS.NOTIFICATIONS, query, parameters);
 }
 
 export async function updateNotificationStatus(
@@ -426,11 +427,11 @@ export async function updateNotificationStatus(
     );
   }
 
-  return patchItem<Notification>(CONTAINERS.NOTIFICATIONS, id, operations, projectId);
+  return patchItem<Notification>(OPERATIONAL_CONTAINERS.NOTIFICATIONS, id, operations, projectId);
 }
 
 export async function deleteNotification(id: string, projectId: string): Promise<void> {
-  return deleteItem(CONTAINERS.NOTIFICATIONS, id, projectId);
+  return deleteItem(OPERATIONAL_CONTAINERS.NOTIFICATIONS, id, projectId);
 }
 
 // =============================================
@@ -438,16 +439,16 @@ export async function deleteNotification(id: string, projectId: string): Promise
 // =============================================
 
 export async function createMembership(membership: Membership): Promise<Membership> {
-  return createItem<Membership>(CONTAINERS.MEMBERSHIP, membership);
+  return createItem<Membership>(OPERATIONAL_CONTAINERS.MEMBERSHIP, membership);
 }
 
 export async function getMembershipById(id: string, resourceType: string, resourceId: string): Promise<Membership> {
-  return readItem<Membership>(CONTAINERS.MEMBERSHIP, id, [resourceType, resourceId]);
+  return readItem<Membership>(OPERATIONAL_CONTAINERS.MEMBERSHIP, id, [resourceType, resourceId]);
 }
 
 export async function getUserMemberships(userId: string): Promise<Membership[]> {
   return queryItems<Membership>(
-    CONTAINERS.MEMBERSHIP,
+    OPERATIONAL_CONTAINERS.MEMBERSHIP,
     'SELECT * FROM c WHERE c.userId = @userId',
     [{ name: '@userId', value: userId }]
   );
@@ -455,7 +456,7 @@ export async function getUserMemberships(userId: string): Promise<Membership[]> 
 
 export async function getResourceMembers(resourceType: string, resourceId: string): Promise<Membership[]> {
   return queryItems<Membership>(
-    CONTAINERS.MEMBERSHIP,
+    OPERATIONAL_CONTAINERS.MEMBERSHIP,
     'SELECT * FROM c WHERE c.resourceType = @resourceType AND c.resourceId = @resourceId',
     [
       { name: '@resourceType', value: resourceType },
@@ -471,7 +472,7 @@ export async function updateMembershipStatus(
   status: Membership['status']
 ): Promise<Membership> {
   return patchItem<Membership>(
-    CONTAINERS.MEMBERSHIP,
+    OPERATIONAL_CONTAINERS.MEMBERSHIP,
     id,
     [{ op: 'replace', path: '/status', value: status }],
     [resourceType, resourceId]
@@ -479,7 +480,7 @@ export async function updateMembershipStatus(
 }
 
 export async function deleteMembership(id: string, resourceType: string, resourceId: string): Promise<void> {
-  return deleteItem(CONTAINERS.MEMBERSHIP, id, [resourceType, resourceId]);
+  return deleteItem(OPERATIONAL_CONTAINERS.MEMBERSHIP, id, [resourceType, resourceId]);
 }
 
 // =============================================
@@ -487,11 +488,11 @@ export async function deleteMembership(id: string, resourceType: string, resourc
 // =============================================
 
 export async function createAnalysisJob(job: AnalysisJob): Promise<AnalysisJob> {
-  return createItem<AnalysisJob>(CONTAINERS.JOBS, job);
+  return createItem<AnalysisJob>(OPERATIONAL_CONTAINERS.JOBS, job);
 }
 
 export async function getAnalysisJobById(id: string, projectId: string): Promise<AnalysisJob> {
-  return readItem<AnalysisJob>(CONTAINERS.JOBS, id, projectId);
+  return readItem<AnalysisJob>(OPERATIONAL_CONTAINERS.JOBS, id, projectId);
 }
 
 export async function getAnalysisJobsByProject(projectId: string, status?: AnalysisJob['status']): Promise<AnalysisJob[]> {
@@ -505,7 +506,7 @@ export async function getAnalysisJobsByProject(projectId: string, status?: Analy
     parameters.push({ name: '@status', value: status });
   }
 
-  return queryItems<AnalysisJob>(CONTAINERS.JOBS, query, parameters);
+  return queryItems<AnalysisJob>(OPERATIONAL_CONTAINERS.JOBS, query, parameters);
 }
 
 export async function updateAnalysisJobStatus(
@@ -529,7 +530,7 @@ export async function updateAnalysisJobStatus(
     operations.push({ op: 'replace', path: '/completedAt', value: new Date().toISOString() });
   }
 
-  return patchItem<AnalysisJob>(CONTAINERS.JOBS, id, operations, projectId);
+  return patchItem<AnalysisJob>(OPERATIONAL_CONTAINERS.JOBS, id, operations, projectId);
 }
 
 export async function updateAnalysisJobResults(
@@ -538,7 +539,7 @@ export async function updateAnalysisJobResults(
   results: AnalysisJob['results']
 ): Promise<AnalysisJob> {
   return patchItem<AnalysisJob>(
-    CONTAINERS.JOBS,
+    OPERATIONAL_CONTAINERS.JOBS,
     id,
     [{ op: 'replace', path: '/results', value: results }],
     projectId

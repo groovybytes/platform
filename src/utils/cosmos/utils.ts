@@ -1,10 +1,10 @@
-import type { Container, Database, ItemDefinition, PartitionKey, PatchOperation } from "@azure/cosmos";
+import type { Container, Database, FeedOptions, FeedResponse, ItemDefinition, PartitionKey, PatchOperation } from "@azure/cosmos";
 import { CosmosClient, PartitionKeyKind } from "@azure/cosmos";
 
 // Environment variable keys for the two Cosmos DB accounts
-const OPERATIONAL_COSMOS_CONNECTION = 'OPERATIONAL_COSMOS_CONNECTION_STRING';
-const ANALYTICS_COSMOS_CONNECTION = 'ANALYTICS_COSMOS_CONNECTION_STRING';
-const OPERATIONAL_DATABASE_NAME = 'operational';
+export const OPERATIONAL_COSMOS_CONNECTION = 'OPERATIONAL_COSMOS_CONNECTION_STRING';
+export const ANALYTICS_COSMOS_CONNECTION = 'ANALYTICS_COSMOS_CONNECTION_STRING';
+export const OPERATIONAL_DATABASE_NAME = 'operational';
 
 // Cache for clients, databases, and containers
 interface CosmosCache {
@@ -183,7 +183,8 @@ export async function queryItems<T>(
   query: string,
   parameters: { name: string, value: any }[] = [],
   databaseName: string = OPERATIONAL_DATABASE_NAME,
-  accountType: AccountType = AccountType.OPERATIONAL
+  accountType: AccountType = AccountType.OPERATIONAL,
+  opts?: FeedOptions,
 ): Promise<T[]> {
   const container = typeof containerNameOrContext === 'string'
     ? getContainer(containerNameOrContext, databaseName, accountType)
@@ -194,8 +195,37 @@ export async function queryItems<T>(
     parameters
   };
 
-  const { resources } = await container.items.query<T>(querySpec).fetchAll();
+  const { resources } = await container.items.query<T>(querySpec, opts).fetchAll();
   return resources;
+}
+
+/**
+ * Execute a query against a container
+ * @param containerNameOrContext Container name or context
+ * @param query SQL query string
+ * @param parameters Query parameters
+ * @param databaseName Legacy database name parameter
+ * @param accountType Legacy account type parameter
+ */
+export async function complexQuery<T>(
+  containerNameOrContext: string | (CosmosContext & { containerName: string }),
+  query: string,
+  parameters: { name: string, value: any }[] = [],
+  opts?: FeedOptions,
+  databaseName: string = OPERATIONAL_DATABASE_NAME,
+  accountType: AccountType = AccountType.OPERATIONAL,
+): Promise<FeedResponse<T>> {
+  const container = typeof containerNameOrContext === 'string'
+    ? getContainer(containerNameOrContext, databaseName, accountType)
+    : getContainer(containerNameOrContext);
+    
+  const querySpec = {
+    query,
+    parameters
+  };
+
+  const result = await container.items.query<T>(querySpec, opts).fetchAll();
+  return result;
 }
 
 /**

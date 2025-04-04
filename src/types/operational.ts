@@ -375,6 +375,12 @@ export interface Notification {
 export interface AnalysisJob {
   id: string;
   projectId: string;  // Scoped to project without workspaceId
+  sparkId?: string;
+  sparkJobState?: string;
+  sparkJobDetails?: {
+    submissionTime?: string,
+    terminationTime?: string
+  };
   type: "scheduled" | "ad-hoc" | "system";
   analysisType: "clustering" | "pattern_detection" | "anomaly_detection" | 
                 "relationship_analysis" | "forecasting" | "segmentation";
@@ -406,4 +412,25 @@ export interface AnalysisJob {
   startedAt?: string;
   completedAt?: string;
   error?: string;
+}
+
+export interface SavedQuery {
+  id: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  sql: string;
+  parameters?: Array<{
+    name: string;
+    value: string | number | boolean;
+    type?: string;
+  }>;
+  category?: string;
+  isPublic: boolean;
+  lastRunAt?: string;
+  runCount: number;
+  createdAt: string;
+  createdBy: string;
+  modifiedAt: string;
+  modifiedBy: string;
 }
