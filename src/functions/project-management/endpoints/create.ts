@@ -1,19 +1,16 @@
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { EnhacedLogContext } from '~/utils/protect';
-import type { Workspace } from '~/types/operational';
+import type { Project, Workspace } from '~/types/operational';
 
-import { queryItems, createItem, patchItem } from '~/utils/cosmos/utils';
-import { badRequest, conflict, handleApiError } from '~/utils/error';
+import { queryItems, createItem, patchItem, readItem } from '~/utils/cosmos/utils';
+import { badRequest, conflict, handleApiError, notFound } from '~/utils/error';
 
-import { assignRolesToUser, createMembership } from '~/utils/membership';
 import { getRequestContext } from '~/utils/context';
-
-import { BASE_URL } from '~/utils/config';
-
 import { secureEndpoint } from '~/utils/protect';
 import { sluggify } from '~/utils/utils';
-import { nanoid } from 'nanoid';
 import { created } from '~/utils/response';
+
+import { createProjectWithDefaults } from '../_settings';
 
 /**
  * HTTP Trigger to create a new project in a workspace

@@ -3,7 +3,7 @@ import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, Invocation
 import type { Membership, User, Workspace, Project } from '~/types/operational';
 import type { EnhacedLogContext } from '~/utils/protect';
 
-import OnboardingOrchestrator from '~/functions/OnboardingOrchestration/orchestrator/onboarding';
+import OnboardingOrchestrator from '~/functions/onboarding-orchestration/orchestrator/onboarding';
 
 import { badRequest, handleApiError, notFound, unauthorized } from '~/utils/error';
 import { getRequestContext } from '~/utils/context';

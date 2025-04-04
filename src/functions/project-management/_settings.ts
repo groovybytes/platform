@@ -1,9 +1,9 @@
 // @filename: utils/project-management/defaults.ts
 import type { Project, RoleDefinition, AssignedRole } from '~/types/operational';
 import { PROJECT_ROLES } from '~/utils/permissions/model';
-import { nanoid } from 'nanoid';
-import { createItem, readItem } from '~/utils/cosmos/utils';
+import { createItem, queryItems } from '~/utils/cosmos/utils';
 import { createProjectDatabase } from '~/utils/cosmos/utils';
+import { nanoid } from 'nanoid';
 
 /**
  * Get default project settings
@@ -174,13 +174,16 @@ export async function assignWorkspaceOwnerToProject(
   workspaceId: string,
   ownerRoleId: string
 ): Promise<void> {
-  // Query to find workspace owner
-  const workspaceOwnerRoles = await readItem<AssignedRole[]>('membership', [{
-    type: "assigned-roles",
-    resourceType: "workspace",
-    resourceId: workspaceId,
-    roles: [`${workspaceId}-workspace-owner`]
-  }]);
+  // Query to find workspace owner roles
+  const workspaceOwnerRoles = await queryItems<AssignedRole>(
+    'membership',
+    'SELECT * FROM c WHERE c.type = "assigned-roles" AND c.resourceType = @resourceType AND c.resourceId = @resourceId AND ARRAY_CONTAINS(c.roles, @ownerRoleId)',
+    [
+      { name: '@resourceType', value: 'workspace' },
+      { name: '@resourceId', value: workspaceId },
+      { name: '@ownerRoleId', value: `${workspaceId}-workspace-owner` }
+    ]
+  );
   
   // If workspace owner exists, assign them to project
   if (workspaceOwnerRoles && workspaceOwnerRoles.length > 0) {

@@ -3,7 +3,7 @@ import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, Invocation
 import type { EnhacedLogContext } from '~/utils/protect';
 import type { Workspace } from '~/types/operational';
 
-import OnboardingEventNotification from '~/functions/OnboardingOrchestration/endpoints/event/event';
+import OnboardingEventNotification from '~/functions/onboarding-orchestration/endpoints/event/event';
 
 import { queryItems, createItem, patchItem } from '~/utils/cosmos/utils';
 import { badRequest, conflict, handleApiError } from '~/utils/error';
