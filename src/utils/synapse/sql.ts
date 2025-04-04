@@ -1,4 +1,4 @@
-// @filename: query-api/services/synapse-sql-service.ts
+// @filename: utils/synapse/sql.ts
 import type { ConnectionPool, IResult, config as MSSQLConfig, ISqlType } from 'mssql';
 
 import process from 'node:process';
