@@ -4,7 +4,8 @@ import type { AnalysisJob } from '~/types/operational';
 
 import { badRequest, handleApiError } from '~/utils/error';
 import { secureEndpoint, type EnhacedLogContext } from '~/utils/protect';
-import { complexQuery, queryItems } from '~/utils/cosmos/utils';
+import { complexQuery } from '~/utils/cosmos/utils';
+
 import { ok } from '~/utils/response';
 import { getRequestContext } from '~/utils/context';
 

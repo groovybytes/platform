@@ -347,37 +347,37 @@ export function protectEndpoint<T>(
 ): (req: Request | HttpRequest, context: T) => Promise<HttpResponseInit> {
   // Capture function initialization errors
   try {
-    // Set default options
-    const {
-      logContext = {},
-      functionName = handler.name || 'anonymous-function'
-    } = options;
-    
-    // Validate and normalize access control configuration to prevent security misconfigurations
-    if (!access) {
-      throw new Error('SECURITY ERROR: Missing access control configuration');
-    }
-    
-    const accessControl: AccessControl = typeof access === 'string' || Array.isArray(access)
-      ? { permissions: access }
-      : access;
-    
-    // Validate permissions are properly defined to prevent authorization bypass
-    if (!accessControl.permissions || 
-        (Array.isArray(accessControl.permissions) && accessControl.permissions.length === 0)) {
-      throw new Error('SECURITY ERROR: Empty or undefined permissions in access control');
-    }
-    
-    const {
-      permissions,
-      match = 'any',
-      errorMessage = `You don't have permission to access this endpoint`,
-      resourceName,
-      requireResource
-    } = accessControl;
-    
     // Return the fully protected handler function that will never throw
     return async (req: Request | HttpRequest, context: T): Promise<HttpResponseInit> => {
+      // Set default options
+      const {
+        logContext = {},
+        functionName = handler?.name || 'anonymous-function'
+      } = options;
+      
+      // Validate and normalize access control configuration to prevent security misconfigurations
+      if (!access) {
+        throw new Error('SECURITY ERROR: Missing access control configuration', { cause: { functionName }});
+      }
+      
+      const accessControl: AccessControl = typeof access === 'string' || Array.isArray(access)
+        ? { permissions: access }
+        : access;
+      
+      // Validate permissions are properly defined to prevent authorization bypass
+      if (!accessControl.permissions || 
+          (Array.isArray(accessControl.permissions) && accessControl.permissions.length === 0)) {
+        throw new Error('SECURITY ERROR: Empty or undefined permissions in access control', { cause: { functionName } });
+      }
+      
+      const {
+        permissions,
+        match = 'any',
+        errorMessage = `You don't have permission to access this endpoint`,
+        resourceName,
+        requireResource
+      } = accessControl;
+
       // Logger
       const logger = (context as InvocationContext) ?? console;
       const invocationId = (context as InvocationContext)?.invocationId || 'unknown';
@@ -595,16 +595,24 @@ export function createRequestPermissionChecker(req: Request | HttpRequest) {
  */
 export function secureEndpoint<T>(
   access: string | string[] | AccessControl,
-  handler: (req: Request | HttpRequest, context: T & EnhacedLogContext) => Promise<HttpResponseInit>
+  handler: (req: Request | HttpRequest, context: T & EnhacedLogContext) => Promise<HttpResponseInit>,
+  opts: ProtectEndpointOptions = {}
 ) {
   return protectEndpoint(
     // Built-in permission checker that uses request token permissions
     async (permission, req, _, options) => {
+      console.log({
+        permissions: permission,
+        request: req,
+        options,
+        _,
+      })
       const requestContext = options?.requestContext ?? await getRequestContext(req);
       return checkPermission(requestContext.request.permissions, permission, options);
     },
     access,
-    handler
+    handler,
+    opts
   );
 }
 

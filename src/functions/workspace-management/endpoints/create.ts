@@ -109,7 +109,8 @@ const CreateWorkspaceHandler: HttpHandler = secureEndpoint(
       context.error('Error creating workspace:', error);
       return handleApiError(error);
     }
-  }
+  },
+  { functionName: 'CreateWorkspace' }
 );
 
 // Register the HTTP trigger

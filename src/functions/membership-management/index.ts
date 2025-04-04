@@ -1,10 +1,9 @@
-// @filename: user-management/membership/index.ts
+// @filename: membership-management/index.ts
 import type { EndpointDefinition, TimerDefinition } from '~/types/definitions';
 
 import { app } from '@azure/functions';
 
 import CreateMembership from './endpoints/create';
-import UpdateMembership from './endpoints/update';
 import AcceptInvitation from './endpoints/invitation/accept';
 import SendReminder from './endpoints/invitation/remind';
 import CleanupFunction from './cron/cleanup';
@@ -21,12 +20,6 @@ export const Endpoints: Record<string, EndpointDefinition> = {
     route: CreateMembership.Route,
     methods: CreateMembership.Methods,
     handler: CreateMembership.Handler,
-  },
-  UpdateMembership: {
-    name: UpdateMembership.Name,
-    route: UpdateMembership.Route,
-    methods: UpdateMembership.Methods,
-    handler: UpdateMembership.Handler,
   },
   DeleteMembership: {
     name: DeleteMembership.Name,
@@ -99,9 +92,6 @@ Object.values(TimerFunctions).forEach(timer => {
 // Input/Output type definitions
 export type CreateMembershipInput = typeof CreateMembership.Input;
 export type CreateMembershipOutput = typeof CreateMembership.Output;
-
-export type UpdateMembershipInput = typeof UpdateMembership.Input;
-export type UpdateMembershipOutput = typeof UpdateMembership.Output;
 
 export type DeleteMembershipInput = typeof DeleteMembership.Input;
 export type DeleteMembershipOutput = typeof DeleteMembership.Output;

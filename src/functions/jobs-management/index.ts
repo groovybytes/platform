@@ -4,8 +4,8 @@ import type { EndpointDefinition } from '~/types/definitions';
 import { app } from '@azure/functions';
 
 import CreateJob from './endpoints/create';
-import GetJob from './endpoints/create';
-import ListJobs from './endpoints/create';
+import GetJob from './endpoints/get';
+import ListJobs from './endpoints/list';
 
 import CancelJob from './endpoints/cancel';
 import GetJobStatus from './endpoints/status';
@@ -55,20 +55,20 @@ Object.values(Endpoints).forEach(endpoint => {
 });
 
 // Input/Output type definitions
-export type CreateJobInput = typeof CreateJob.Input;
-export type CreateJobOutput = typeof CreateJob.Output;
+// export type CreateJobInput = typeof CreateJob.Input;
+// export type CreateJobOutput = typeof CreateJob.Output;
 
-export type GetJobInput = typeof GetJob.Input;
-export type GetJobOutput = typeof GetJob.Output;
+// export type GetJobInput = typeof GetJob.Input;
+// export type GetJobOutput = typeof GetJob.Output;
 
-export type ListJobsInput = typeof ListJobs.Input;
-export type ListJobsOutput = typeof ListJobs.Output;
+// export type ListJobsInput = typeof ListJobs.Input;
+// export type ListJobsOutput = typeof ListJobs.Output;
 
-export type CancelJobInput = typeof CancelJob.Input;
-export type CancelJobOutput = typeof CancelJob.Output;
+// export type CancelJobInput = typeof CancelJob.Input;
+// export type CancelJobOutput = typeof CancelJob.Output;
 
-export type GetJobStatusInput = typeof GetJobStatus.Input;
-export type GetJobStatusOutput = typeof GetJobStatus.Output;
+// export type GetJobStatusInput = typeof GetJobStatus.Input;
+// export type GetJobStatusOutput = typeof GetJobStatus.Output;
 
 // Default export
 export default Endpoints;

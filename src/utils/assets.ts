@@ -34,7 +34,7 @@ export function getBlobServiceClient(): BlobServiceClient {
 export function getProjectContainerName(projectId: string): string {
   // Create a safe container name (lowercase, alphanumeric + dash)
   // Container names must be lowercase, between 3-63 characters
-  return `assets-${projectId.toLowerCase()}`.replace(/[^a-z0-9-]/g, '');
+  return `project-${projectId.toLowerCase()}`.replace(/[^a-z0-9-]/g, '');
 }
 
 /**

@@ -3,8 +3,6 @@ import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, Invocation
 import type { EnhacedLogContext } from '~/utils/protect';
 import type { Membership, Workspace, Project } from '~/types/operational';
 
-import AcceptInvitation from './accept';
-
 import { badRequest, handleApiError, notFound, conflict } from '~/utils/error';
 import { secureEndpoint } from '~/utils/protect';
 import { getRequestContext } from '~/utils/context';

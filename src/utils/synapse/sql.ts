@@ -5,7 +5,7 @@ import process from 'node:process';
 import sql from "mssql";
 
 // Synapse Serverless SQL Pool connection details
-const SQL_SERVER_ENDPOINT = process.env.SYNAPSE_SQL_SERVER_ENDPOINT; // e.g., 'groovybytes-ondemand.sql.azuresynapse.net'
+const SQL_SERVER_ENDPOINT = process.env.SYNAPSE_ENDPOINT; // e.g., 'groovybytes-ondemand.sql.azuresynapse.net'
 const SQL_DATABASE = 'master'; // Serverless SQL uses master as the default database
 const SQL_USERNAME = process.env.SYNAPSE_SQL_USERNAME;
 const SQL_PASSWORD = process.env.SYNAPSE_SQL_PASSWORD;

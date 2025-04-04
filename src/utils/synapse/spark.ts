@@ -5,7 +5,6 @@ import { DefaultAzureCredential } from '@azure/identity';
 import { SparkClient } from '@azure/synapse-spark';
 
 // Azure Synapse Workspace details
-const SYNAPSE_WORKSPACE_NAME = process.env.SYNAPSE_WORKSPACE_NAME;
 const SYNAPSE_ENDPOINT = process.env.SYNAPSE_ENDPOINT; // https://{workspace-name}.dev.azuresynapse.net
 const SYNAPSE_SPARK_POOL_NAME = process.env.SYNAPSE_SPARK_POOL_NAME || 'groovybytes';
 
@@ -199,25 +198,12 @@ export function getSparkJobConfigForAnalysis(
   const codeContainer = process.env.CODE_CONTAINER_NAME || 'notebooks';
   const baseFilePath = `abfss://${codeContainer}@${dataLakeAccount}.dfs.core.windows.net/analysis`;
   
-  // Common JAR files needed for most analysis jobs
-  const commonJars = [
-    `abfss://${codeContainer}@${dataLakeAccount}.dfs.core.windows.net/jars/azure-cosmos-spark_3-4_2-12-4.19.1.jar`,
-    `abfss://${codeContainer}@${dataLakeAccount}.dfs.core.windows.net/jars/groovybytes-common.jar`
-  ];
-  
-  // Common Python files needed for most analysis jobs
-  const commonPyFiles = [
-    `abfss://${codeContainer}@${dataLakeAccount}.dfs.core.windows.net/python/groovybytes_common.py`
-  ];
-  
   // Default job configuration
   const baseConfig: SparkJobConfig = {
     jobId,
     jobName: `${analysisType}_${projectId}_${jobId}`,
     file: `${baseFilePath}/generic_analysis.py`,
     args: [projectId, jobId, JSON.stringify(configuration)],
-    jars: commonJars,
-    pyFiles: commonPyFiles,
     configurations: {
       "spark.driver.userClassPathFirst": "true",
       "spark.executor.userClassPathFirst": "true",
@@ -233,7 +219,7 @@ export function getSparkJobConfigForAnalysis(
       return {
         ...baseConfig,
         file: `${baseFilePath}/clustering.py`,
-        pyFiles: [...commonPyFiles, `${baseFilePath}/ml/clustering_utils.py`],
+        pyFiles: [`${baseFilePath}/ml/clustering_utils.py`],
         executorMemory: "8g",
         driverMemory: "8g"
       };
@@ -242,7 +228,7 @@ export function getSparkJobConfigForAnalysis(
       return {
         ...baseConfig,
         file: `${baseFilePath}/pattern_detection.py`,
-        pyFiles: [...commonPyFiles, `${baseFilePath}/ml/pattern_detection_utils.py`],
+        pyFiles: [`${baseFilePath}/ml/pattern_detection_utils.py`],
         executorMemory: "8g"
       };
     
@@ -250,14 +236,14 @@ export function getSparkJobConfigForAnalysis(
       return {
         ...baseConfig,
         file: `${baseFilePath}/anomaly_detection.py`,
-        pyFiles: [...commonPyFiles, `${baseFilePath}/ml/anomaly_detection_utils.py`]
+        pyFiles: [`${baseFilePath}/ml/anomaly_detection_utils.py`]
       };
     
     case 'relationship_analysis':
       return {
         ...baseConfig,
         file: `${baseFilePath}/relationship_analysis.py`,
-        pyFiles: [...commonPyFiles, `${baseFilePath}/ml/graph_utils.py`],
+        pyFiles: [`${baseFilePath}/ml/graph_utils.py`],
         executorMemory: "8g",
         numExecutors: 4
       };
@@ -266,7 +252,7 @@ export function getSparkJobConfigForAnalysis(
       return {
         ...baseConfig,
         file: `${baseFilePath}/forecasting.py`,
-        pyFiles: [...commonPyFiles, `${baseFilePath}/ml/forecasting_utils.py`],
+        pyFiles: [`${baseFilePath}/ml/forecasting_utils.py`],
         executorMemory: "8g",
         driverMemory: "8g"
       };
@@ -275,7 +261,7 @@ export function getSparkJobConfigForAnalysis(
       return {
         ...baseConfig,
         file: `${baseFilePath}/segmentation.py`,
-        pyFiles: [...commonPyFiles, `${baseFilePath}/ml/segmentation_utils.py`]
+        pyFiles: [`${baseFilePath}/ml/segmentation_utils.py`]
       };
       
     default:

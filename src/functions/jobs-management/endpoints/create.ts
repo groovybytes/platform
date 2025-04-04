@@ -3,13 +3,14 @@ import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, Invocation
 import type { EnhacedLogContext } from '~/utils/protect';
 import type { AnalysisJob } from '~/types/operational';
 
+import { getSparkJobConfigForAnalysis, submitSparkJob } from '~/utils/synapse/spark';
 import { badRequest, handleApiError, serverError } from '~/utils/error';
-import { getRequestContext } from '~/utils/context';
-import { secureEndpoint } from '~/utils/protect';
 import { createItem, patchItem } from '~/utils/cosmos/utils';
+import { getRequestContext } from '~/utils/context';
+
+import { secureEndpoint } from '~/utils/protect';
 import { ok } from '~/utils/response';
 import { nanoid } from 'nanoid';
-import { getSparkJobConfigForAnalysis, submitSparkJob } from '~/utils/synapse/spark';
 
 interface CreateJobRequest {
   analysisType: AnalysisJob['analysisType'];

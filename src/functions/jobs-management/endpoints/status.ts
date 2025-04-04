@@ -1,5 +1,6 @@
 // @filename: job-management/endpoints/status.ts
 import type { HttpHandler, HttpMethod, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import type { PatchOperation } from '@azure/cosmos';
 import type { AnalysisJob } from '~/types/operational';
 
 import { badRequest, handleApiError, notFound } from '~/utils/error';
@@ -8,7 +9,6 @@ import { readItem, patchItem } from '~/utils/cosmos/utils';
 import { ok } from '~/utils/response';
 import { getRequestContext } from '~/utils/context';
 import { getSparkJobStatus } from '~/utils/synapse/spark';
-import type { PatchOperation } from '@azure/cosmos';
 
 interface JobStatusResponse {
   job: AnalysisJob;

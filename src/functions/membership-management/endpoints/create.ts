@@ -14,11 +14,9 @@ import { sendInvitationEmail } from '~/email/email';
 import { generateRandomHex } from '~/utils/utils';
 import { secureEndpoint } from '~/utils/protect';
 
-import { BACKEND_BASE_URL, FRONTEND_BASE_URL } from '~/utils/config';
-import { nanoid } from 'nanoid';
-
-import AcceptInvitation from './invitation/accept';
+import { FRONTEND_BASE_URL } from '~/utils/config';
 import { created } from '~/utils/response';
+import { nanoid } from 'nanoid';
 
 /**
  * HTTP Trigger to create a membership or invitation
